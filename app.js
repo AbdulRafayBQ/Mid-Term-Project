@@ -1,1239 +1,2783 @@
-/* ==========================================================
-   KAAM KRWAO — prototype app logic (vanilla JS, localStorage)
-   ========================================================== */
-(function(){
+/* =========================================================
+   KAAM KRWAO — APP.JS
+   Premium White 3D Interactive Version (FIXED)
+   ========================================================= */
+
 "use strict";
 
-/* ---------- DATA ---------- */
-const CATEGORIES = [
-  {id:"electrician",name:"Electrician",icon:"⚡",desc:"bijli ka kaam"},
-  {id:"plumber",name:"Plumber",icon:"🚿",desc:"paani ka kaam"},
-  {id:"ac",name:"AC Technician",icon:"❄️",desc:"AC service/repair"},
-  {id:"painter",name:"Painter",icon:"🎨",desc:"paint ka kaam"},
-  {id:"mechanic",name:"Mechanic",icon:"🔧",desc:"gaari/bike"},
-  {id:"appliance",name:"Appliance Repair",icon:"🧺",desc:"washing machine, fridge"},
-];
+/* =========================================================
+   GLOBAL STATE
+   ========================================================= */
 
-const DEMO_NAMES = ["Muhammad Irfan","Bilal Ahmed","Shahid Hussain","Asif Raza","Kashif Iqbal","Zubair Khan","Rizwan Ali","Nasir Mehmood","Junaid Sheikh","Waqar Abbas","Imran Farooq","Adnan Malik"];
-const AREAS_BY_CITY = {Karachi:["DHA","Clifton","Gulshan-e-Iqbal","North Nazimabad","Malir","Korangi"],Lahore:["DHA","Gulberg","Johar Town","Model Town","Bahria Town"],Islamabad:["F-7","G-9","F-10","Bahria Town","DHA"],Rawalpindi:["Saddar","Bahria Town","Satellite Town"],Faisalabad:["Peoples Colony","Madina Town","Susan Road"]};
+const state = {
 
-function rand(arr){return arr[Math.floor(Math.random()*arr.length)];}
-function randInt(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
-function uid(prefix){return prefix+"_"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
-function avatarUrl(seed){return `https://i.pravatar.cc/150?img=${seed}`;}
-function money(n){return "Rs. "+Number(n).toLocaleString("en-PK");}
+  currentView: "home",
 
-function genDemoUstaad(catId, seedNum){
-  const cat = CATEGORIES.find(c=>c.id===catId) || rand(CATEGORIES);
-  const city = "Karachi";
-  return {
-    id: uid("ust"),
-    name: rand(DEMO_NAMES),
-    skill: cat.id,
-    skillName: cat.name,
-    photo: avatarUrl(seedNum),
-    experience: randInt(2,14),
-    rating: (Math.random()*1.3+3.6).toFixed(1),
-    completedJobs: randInt(40,540),
-    responseRate: randInt(85,99),
-    visitingFee: rand([200,250,300,350,400,500]),
-    guarantee: rand(["7 days","30 days","3 months","1 year"]),
-    city, areas:[rand(AREAS_BY_CITY[city]),rand(AREAS_BY_CITY[city])],
-    verified:true,
-  };
-}
+  jobs: [],
 
-/* seed a pool of demo ustaads once */
-function seedUstaadPool(){
-  let pool = DB.get("ustaadPool");
-  if(pool && pool.length) return pool;
-  pool = [];
-  let seed=1;
-  CATEGORIES.forEach(cat=>{
-    for(let i=0;i<4;i++){ pool.push(genDemoUstaad(cat.id, (seed++ % 70)+1)); }
-  });
-  DB.set("ustaadPool", pool);
-  return pool;
-}
+  selectedCategory: null,
 
-/* ---------- SIMPLE DB (localStorage wrapper) ---------- */
-const DB = {
-  get(key, fallback){ try{ const v=localStorage.getItem("kk_"+key); return v?JSON.parse(v):(fallback!==undefined?fallback:null);}catch(e){return fallback;} },
-  set(key, val){ try{ localStorage.setItem("kk_"+key, JSON.stringify(val)); }catch(e){} },
+  online: true,
+
+  aiOpen: false,
+
+  mouseX: 0,
+
+  mouseY: 0
+
 };
 
-/* ---------- STATE INIT ---------- */
-function initState(){
-  if(!DB.get("customer")) DB.set("customer",{id:uid("cus"),name:"Ahmed Raza",phone:"0300-1234567"});
-  if(!DB.get("jobs")) DB.set("jobs",[]);
-  if(!DB.get("ustaadProfile")) DB.set("ustaadProfile",null);
-  if(!DB.get("ustaadJobsAssigned")) DB.set("ustaadJobsAssigned",[]);
-  seedUstaadPool();
-}
-initState();
 
-/* ---------- TOASTS ---------- */
-function toast(title, body, type="default", icon="🔔"){
-  const stack = document.getElementById("toastStack");
-  const el = document.createElement("div");
-  el.className = "toast "+(type==="success"?"success":type==="error"?"error":"");
-  el.innerHTML = `<span class="toast-icon">${icon}</span><div><div class="toast-title">${title}</div><div class="toast-body">${body||""}</div></div>`;
-  stack.appendChild(el);
-  setTimeout(()=>{ el.classList.add("out"); setTimeout(()=>el.remove(),300); }, 4200);
-}
+/* =========================================================
+   HELPERS
+   ========================================================= */
 
-/* ---------- NAVIGATION (SPA views) ---------- */
-const VIEWS = ["home","post-job","finding","compare","tracker","customer-dashboard",
-  "ustaad-landing","ustaad-apply","ustaad-verification","ustaad-membership","ustaad-dashboard"];
+const $ = (selector, parent = document) =>
+  parent.querySelector(selector);
 
-let navContext = {}; // holds jobId etc between views
+const $$ = (selector, parent = document) =>
+  [...parent.querySelectorAll(selector)];
 
-function showView(name, ctx){
-  ctx = ctx || {};
-  navContext = Object.assign(navContext, ctx);
-  VIEWS.forEach(v=>{
-    const el = document.getElementById("view-"+v);
-    if(el) el.classList.toggle("active", v===name);
-  });
-  window.scrollTo({top:0,behavior:"smooth"});
-  document.getElementById("navLinks").classList.remove("open");
 
-  // view-specific renderers
-  if(name==="home") renderHome();
-  if(name==="post-job") renderPostJob();
-  if(name==="compare") renderCompare(ctx.jobId || navContext.jobId);
-  if(name==="tracker") renderTracker(ctx.jobId || navContext.jobId);
-  if(name==="customer-dashboard") renderCustomerDashboard();
-  if(name==="ustaad-apply") renderUstaadApply();
-  if(name==="ustaad-verification") renderUstaadVerification();
-  if(name==="ustaad-membership") renderUstaadMembership();
-  if(name==="ustaad-dashboard") renderUstaadDashboard();
+function escapeHTML(value){
 
-  triggerReveal();
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
 }
 
-document.addEventListener("click", (e)=>{
-  const navEl = e.target.closest("[data-nav]");
-  if(navEl){
-    e.preventDefault();
-    const target = navEl.getAttribute("data-nav");
-    if(target==="ustaad-landing" || target==="ustaad-apply" || target==="ustaad-membership" || target==="ustaad-dashboard" || target==="ustaad-verification"){
-      routeUstaad(target);
-    } else if(target==="customer-dashboard"){
-      showView("customer-dashboard");
-    } else {
-      showView(target);
-    }
-  }
-});
 
-function routeUstaad(requested){
-  const profile = DB.get("ustaadProfile");
-  if(requested==="ustaad-landing"){ showView("ustaad-landing"); return; }
-  if(requested==="ustaad-apply"){ showView("ustaad-apply"); return; }
-  if(requested==="ustaad-dashboard"){
-    if(!profile){ showView("ustaad-landing"); return; }
-    if(profile.status==="pending"){ showView("ustaad-verification"); return; }
-    if(profile.status==="verified" && !profile.membershipActive){ showView("ustaad-membership"); return; }
-    showView("ustaad-dashboard");
-    return;
-  }
-  showView(requested);
-}
+/* =========================================================
+   LOCAL STORAGE
+   ========================================================= */
 
-document.getElementById("navBurger").addEventListener("click", ()=>{
-  document.getElementById("navLinks").classList.toggle("open");
-});
+function saveState(){
 
-/* ---------- SCROLL REVEAL ---------- */
-let revealObserver;
-function triggerReveal(){
-  if(revealObserver) revealObserver.disconnect();
-  const els = document.querySelectorAll(".view.active .reveal");
-  revealObserver = new IntersectionObserver((entries)=>{
-    entries.forEach(en=>{ if(en.isIntersecting){ en.target.classList.add("in"); revealObserver.unobserve(en.target); } });
-  },{threshold:.12});
-  els.forEach(el=>revealObserver.observe(el));
-}
+  try{
 
-/* ==========================================================
-   HOME VIEW RENDER
-   ========================================================== */
-function renderHome(){
-  const catGrid = document.getElementById("catGrid");
-  if(!catGrid.dataset.built){
-    catGrid.innerHTML = CATEGORIES.map(c=>`
-      <div class="cat-card" data-nav="post-job" data-precat="${c.id}">
-        <div class="cat-icon">${c.icon}</div>
-        <h4>${c.name}</h4>
-        <span>${c.desc}</span>
-      </div>`).join("");
-    catGrid.dataset.built="1";
-    catGrid.addEventListener("click",(e)=>{
-      const card = e.target.closest("[data-precat]");
-      if(card){ preselectCategory = card.getAttribute("data-precat"); }
-    });
-  }
-  const feat = document.getElementById("featuredUstaads");
-  if(!feat.dataset.built){
-    const pool = seedUstaadPool().slice(0,8);
-    feat.innerHTML = pool.map(u=>ustaadCardHTML(u)).join("");
-    feat.dataset.built="1";
-  }
-}
+    localStorage.setItem(
+      "kaamKrwaoJobs",
+      JSON.stringify(state.jobs)
+    );
 
-function ustaadCardHTML(u){
-  return `<div class="ustaad-card">
-    <div class="ustaad-top">
-      <img class="ustaad-avatar" src="${u.photo}" alt="${u.name}">
-      <div>
-        <div class="ustaad-name">${u.name} <span class="badge badge-verified">verified</span></div>
-        <div class="ustaad-skill">${u.skillName}</div>
-      </div>
-    </div>
-    <div class="ustaad-rating">★ ${u.rating} <span style="color:var(--slate-dim)">(${u.completedJobs} jobs)</span></div>
-    <div class="ustaad-meta">
-      <span class="chip">${u.experience} saal tajurba</span>
-      <span class="chip chip-green">${u.guarantee} guarantee</span>
-      <span class="chip">visit ${money(u.visitingFee)}</span>
-    </div>
-  </div>`;
-}
+  }catch(error){
 
-/* ==========================================================
-   CUSTOMER: POST JOB FLOW
-   ========================================================== */
-let preselectCategory = null;
-let jobDraft = {photos:[],video:null};
-let jobStep = 1;
+    console.warn(
+      "Could not save jobs:",
+      error
+    );
 
-function renderPostJob(){
-  jobStep = 1;
-  jobDraft = {photos:[],video:null};
-  document.getElementById("jobForm").reset();
-  document.getElementById("jobPhotoPreview").innerHTML="";
-  document.getElementById("jobVideoPreview").innerHTML="";
-  updateJobStepper();
-
-  const grid = document.getElementById("jobCatGrid");
-  grid.innerHTML = CATEGORIES.map(c=>`
-    <div class="cat-select" data-cat="${c.id}">
-      <div class="cat-icon">${c.icon}</div><h4>${c.name}</h4>
-    </div>`).join("");
-  grid.querySelectorAll(".cat-select").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      grid.querySelectorAll(".cat-select").forEach(x=>x.classList.remove("selected"));
-      el.classList.add("selected");
-      jobDraft.category = el.getAttribute("data-cat");
-    });
-  });
-  if(preselectCategory){
-    const match = grid.querySelector(`[data-cat="${preselectCategory}"]`);
-    if(match) match.click();
-    preselectCategory = null;
-  }
-}
-
-document.getElementById("jobPhotos").addEventListener("change", (e)=>{
-  const preview = document.getElementById("jobPhotoPreview");
-  preview.innerHTML="";
-  jobDraft.photos = [];
-  Array.from(e.target.files).slice(0,4).forEach(f=>{
-    const url = URL.createObjectURL(f);
-    jobDraft.photos.push(url);
-    const img = document.createElement("img"); img.src=url; preview.appendChild(img);
-  });
-});
-document.getElementById("jobVideo").addEventListener("change",(e)=>{
-  const preview = document.getElementById("jobVideoPreview");
-  preview.innerHTML="";
-  if(e.target.files[0]){
-    jobDraft.video = e.target.files[0].name;
-    const chip = document.createElement("div"); chip.className="file-chip"; chip.textContent="🎬 "+jobDraft.video;
-    preview.appendChild(chip);
-  }
-});
-
-function updateJobStepper(){
-  document.querySelectorAll("#jobStepper .step").forEach(s=>{
-    const n = +s.getAttribute("data-step");
-    s.classList.toggle("active", n===jobStep);
-    s.classList.toggle("done", n<jobStep);
-  });
-  document.querySelectorAll("#jobForm .form-step").forEach(s=>{
-    s.classList.toggle("active", +s.getAttribute("data-step")===jobStep);
-  });
-  document.getElementById("jobPrev").style.visibility = jobStep===1 ? "hidden":"visible";
-  document.getElementById("jobNext").classList.toggle("hidden", jobStep===4);
-  document.getElementById("jobSubmit").classList.toggle("hidden", jobStep!==4);
-  if(jobStep===4) buildJobReview();
-}
-
-function buildJobReview(){
-  jobDraft.description = document.getElementById("jobDesc").value.trim();
-  jobDraft.location = document.getElementById("jobLocation").value.trim();
-  jobDraft.time = document.getElementById("jobTime").value;
-  jobDraft.pricingPref = document.getElementById("jobPricingPref").value;
-  const cat = CATEGORIES.find(c=>c.id===jobDraft.category);
-  const box = document.getElementById("jobReviewBox");
-  box.innerHTML = `
-    <div class="review-row"><span>Category</span><span>${cat? cat.icon+" "+cat.name : "—"}</span></div>
-    <div class="review-row"><span>Description</span><span>${jobDraft.description || "—"}</span></div>
-    <div class="review-row"><span>Photos</span><span>${jobDraft.photos.length} attached</span></div>
-    <div class="review-row"><span>Video</span><span>${jobDraft.video || "koi nahi"}</span></div>
-    <div class="review-row"><span>Location</span><span>${jobDraft.location || "—"}</span></div>
-    <div class="review-row"><span>Waqt</span><span>${jobDraft.time}</span></div>
-  `;
-}
-
-document.getElementById("jobNext").addEventListener("click", ()=>{
-  if(jobStep===1 && !jobDraft.category){ toast("Category chunain","Aage badhne se pehle ek category select karein.","error","⚠️"); return; }
-  if(jobStep===2 && !document.getElementById("jobDesc").value.trim()){ toast("Description likhein","Apne masle ki thodi tafseel den.","error","⚠️"); return; }
-  if(jobStep===3 && !document.getElementById("jobLocation").value.trim()){ toast("Location darj karein","Ustaad tak pohanchne ke liye area/address zaroori hai.","error","⚠️"); return; }
-  jobStep = Math.min(4, jobStep+1);
-  updateJobStepper();
-});
-document.getElementById("jobPrev").addEventListener("click", ()=>{
-  jobStep = Math.max(1, jobStep-1);
-  updateJobStepper();
-});
-
-document.getElementById("jobForm").addEventListener("submit",(e)=>{
-  e.preventDefault();
-  buildJobReview();
-  const job = {
-    id: uid("job"),
-    ...jobDraft,
-    status:"finding", // finding -> open -> selected -> accepted -> on_the_way -> reached -> in_progress -> completed / cancelled
-    createdAt: Date.now(),
-    applicants: [],
-    selectedUstaadId: null,
-    pricing: null,
-    chat: [],
-  };
-  const jobs = DB.get("jobs",[]);
-  jobs.unshift(job);
-  DB.set("jobs", jobs);
-  showView("finding", {jobId: job.id});
-  runFindingSimulation(job.id);
-});
-
-/* ==========================================================
-   FINDING USTAADS SIMULATION
-   ========================================================== */
-function runFindingSimulation(jobId){
-  const jobs = DB.get("jobs",[]);
-  const job = jobs.find(j=>j.id===jobId);
-  if(!job) return;
-  const pool = seedUstaadPool().filter(u=>u.skill===job.category);
-  const chosen = [];
-  const shuffled = [...pool].sort(()=>Math.random()-.5);
-  const count = Math.min(4, Math.max(3, shuffled.length));
-  for(let i=0;i<count && i<shuffled.length;i++) chosen.push(shuffled[i]);
-
-  const log = document.getElementById("findingLog");
-  log.innerHTML = "";
-  document.getElementById("findingTitle").textContent = "Finding available ustaads...";
-  document.getElementById("findingSub").textContent = "Aapke qareeb verified ustaads ko notify kiya ja raha hai";
-
-  const steps = [
-    {t:600, msg:`📡 ${chosen.length} verified ustaads ko job bheja gaya`},
-  ];
-  chosen.forEach((u,i)=> steps.push({t:1200+i*900, msg:`🔔 ${u.name} ne notification dekha aur job dekh rahe hain...`}));
-  steps.push({t:1400+chosen.length*900, msg:`✅ ${chosen.length} ustaads ne apply kar diya hai`});
-
-  steps.forEach(s=>{
-    setTimeout(()=>{
-      const item = document.createElement("div");
-      item.className="finding-log-item";
-      item.textContent = s.msg;
-      log.appendChild(item);
-    }, s.t);
-  });
-
-  setTimeout(()=>{
-    const jobsNow = DB.get("jobs",[]);
-    const j = jobsNow.find(x=>x.id===jobId);
-    if(j){
-      j.status = "open";
-      j.applicants = chosen.map(u=>({
-        ustaadId:u.id, ustaad:u,
-        message: rand([
-          "Main abhi 20 min mein pahunch sakta hoon, kaam achi tarah dekh loonga.",
-          "Aapka masla common hai, main isay jald theek kar dunga.",
-          "Mera experience is field mein kaafi hai, guarantee ke sath kaam karta hoon.",
-          "Available hoon, visit karke sahi price bataunga.",
-        ]),
-      }));
-      DB.set("jobs", jobsNow);
-
-      // also register these jobs as "assigned" for ustaad-side simulation
-      const assigned = DB.get("ustaadJobsAssigned",[]);
-      chosen.forEach(u=> assigned.push({jobId, ustaadId:u.id}) );
-      DB.set("ustaadJobsAssigned", assigned);
-    }
-    toast("Ustaads mil gaye!", `${chosen.length} ustaads ne aapke kaam par apply kiya hai.`, "success", "🎉");
-    showView("compare", {jobId});
-  }, 1500+chosen.length*900+700);
-}
-
-/* ==========================================================
-   COMPARE APPLICANTS
-   ========================================================== */
-function renderCompare(jobId){
-  const jobs = DB.get("jobs",[]);
-  const job = jobs.find(j=>j.id===jobId);
-  const grid = document.getElementById("applicantGrid");
-  if(!job){ grid.innerHTML = `<p class="empty-note">Job nahi mila.</p>`; return; }
-
-  if(job.status==="finding"){
-    grid.innerHTML = `<p class="empty-note">Ustaads dhoonde ja rahe hain, thodi der intezaar karein...</p>`;
-    return;
-  }
-  if(!job.applicants.length){
-    grid.innerHTML = `<p class="empty-note">Is waqt koi ustaad available nahi. Baad mein try karein.</p>`;
-    return;
-  }
-  document.getElementById("compareSub").textContent = job.selectedUstaadId
-    ? "Aapne pehle hi ek ustaad select kar liya hai."
-    : "In ustaads ne aapke kaam par apply kiya hai — best select karein";
-
-  grid.innerHTML = job.applicants.map(a=>{
-    const u = a.ustaad;
-    const isSelected = job.selectedUstaadId===u.id;
-    return `<div class="applicant-card">
-      <div class="applicant-top">
-        <img class="applicant-avatar" src="${u.photo}">
-        <div>
-          <div class="ustaad-name">${u.name} <span class="badge badge-verified">verified</span></div>
-          <div class="ustaad-skill">${u.skillName}</div>
-        </div>
-      </div>
-      <div class="applicant-msg">"${a.message}"</div>
-      <div class="applicant-stats">
-        <div class="astat"><strong>★ ${u.rating}</strong><span>${u.completedJobs} jobs</span></div>
-        <div class="astat"><strong>${u.experience} saal</strong><span>experience</span></div>
-        <div class="astat"><strong>${u.guarantee}</strong><span>guarantee</span></div>
-        <div class="astat"><strong>${money(u.visitingFee)}</strong><span>visiting fee</span></div>
-      </div>
-      <button class="btn btn-primary full" ${job.selectedUstaadId?"disabled":""} data-select-ustaad="${u.id}" data-job="${job.id}">
-        ${isSelected ? "selected ✓" : (job.selectedUstaadId? "kisi aur ko select kiya" : "select karein")}
-      </button>
-    </div>`;
-  }).join("");
-
-  grid.querySelectorAll("[data-select-ustaad]").forEach(btn=>{
-    btn.addEventListener("click", ()=> selectUstaad(btn.getAttribute("data-job"), btn.getAttribute("data-select-ustaad")));
-  });
-}
-
-function selectUstaad(jobId, ustaadId){
-  const jobs = DB.get("jobs",[]);
-  const job = jobs.find(j=>j.id===jobId);
-  if(!job || job.selectedUstaadId) return;
-  job.selectedUstaadId = ustaadId;
-  job.status = "selected";
-  const u = job.applicants.find(a=>a.ustaadId===ustaadId).ustaad;
-  job.chat.push({from:"ustaad", text:`Assalam-o-Alaikum! Main ${u.name} bol raha hoon, aapka job accept kar liya hai. Jald hi pricing confirm karta hoon.`, ts:Date.now()});
-  DB.set("jobs", jobs);
-  toast("Ustaad select ho gaya", `${u.name} ko aapke kaam ke liye select kar liya gaya hai.`, "success", "✅");
-  renderCompare(jobId);
-  setTimeout(()=> openChatModal(jobId), 500);
-}
-
-/* ==========================================================
-   CHAT MODAL
-   ========================================================== */
-function openChatModal(jobId){
-  const jobs = DB.get("jobs",[]);
-  const job = jobs.find(j=>j.id===jobId);
-  if(!job) return;
-  const u = job.applicants.find(a=>a.ustaadId===job.selectedUstaadId).ustaad;
-
-  openModal(`
-    <span class="modal-close" data-close-modal>✕</span>
-    <div class="chat-window">
-      <div class="chat-header"><img src="${u.photo}"><div><div style="font-weight:600">${u.name}</div><div style="font-size:.75rem;color:var(--slate)">${u.skillName} · online</div></div></div>
-      <div class="chat-body" id="chatBody"></div>
-      <div class="chat-input-row">
-        <input type="text" id="chatInput" placeholder="Message likhein...">
-        <button id="chatSend">➤</button>
-      </div>
-    </div>
-  `);
-  renderChatBody(jobId);
-  document.getElementById("chatSend").onclick = ()=> sendChat(jobId);
-  document.getElementById("chatInput").addEventListener("keydown",(e)=>{ if(e.key==="Enter") sendChat(jobId); });
-}
-
-function renderChatBody(jobId){
-  const jobs = DB.get("jobs",[]);
-  const job = jobs.find(j=>j.id===jobId);
-  const body = document.getElementById("chatBody");
-  if(!body) return;
-  body.innerHTML = job.chat.map(m=>`<div class="chat-bubble ${m.from==='customer'?'me':'them'}">${m.text}</div>`).join("");
-  body.scrollTop = body.scrollHeight;
-}
-
-function sendChat(jobId){
-  const input = document.getElementById("chatInput");
-  const text = input.value.trim();
-  if(!text) return;
-  const jobs = DB.get("jobs",[]);
-  const job = jobs.find(j=>j.id===jobId);
-  job.chat.push({from:"customer", text, ts:Date.now()});
-  DB.set("jobs", jobs);
-  input.value="";
-  renderChatBody(jobId);
-  setTimeout(()=>{
-    const jobs2 = DB.get("jobs",[]);
-    const job2 = jobs2.find(j=>j.id===jobId);
-    job2.chat.push({from:"ustaad", text: rand(["Theek hai ji.","Main jald pahunch raha hoon.","Bilkul, koi masla nahi.","Aap fikar na karein, kaam sahi ho jayega."]), ts:Date.now()});
-    DB.set("jobs", jobs2);
-    renderChatBody(jobId);
-  }, 1100);
-}
-
-/* ---------- generic modal ---------- */
-function openModal(html){
-  document.getElementById("modalBox").innerHTML = html;
-  document.getElementById("modalOverlay").classList.add("active");
-}
-function closeModal(){ document.getElementById("modalOverlay").classList.remove("active"); }
-document.addEventListener("click",(e)=>{
-  if(e.target.id==="modalOverlay" || e.target.closest("[data-close-modal]")) closeModal();
-});
-
-/* ==========================================================
-   JOB TRACKER (customer + ustaad shared render, mode-aware)
-   ========================================================== */
-const STAGES = [
-  {k:"selected", label:"selected", icon:"1"},
-  {k:"accepted", label:"accepted", icon:"2"},
-  {k:"on_the_way", label:"on the way", icon:"3"},
-  {k:"reached", label:"reached", icon:"4"},
-  {k:"in_progress", label:"in progress", icon:"5"},
-  {k:"completed", label:"completed", icon:"✓"},
-];
-
-function stageIndex(status){
-  if(status==="cancelled") return -1;
-  const i = STAGES.findIndex(s=>s.k===status);
-  return i===-1?0:i;
-}
-
-function renderTracker(jobId){
-  const jobs = DB.get("jobs",[]);
-  const job = jobs.find(j=>j.id===jobId);
-  const wrap = document.getElementById("trackerWrap");
-  if(!job){ wrap.innerHTML="<p class='empty-note'>Job nahi mila.</p>"; return; }
-  const u = job.applicants.find(a=>a.ustaadId===job.selectedUstaadId)?.ustaad;
-  const cat = CATEGORIES.find(c=>c.id===job.category);
-  const idx = stageIndex(job.status);
-  const isUstaadView = navContext.mode === "ustaad";
-
-  let progressHTML = `<div class="progress-track">` + STAGES.map((s,i)=>`
-    <div class="progress-step ${job.status==='cancelled'?'':(i<idx?'done':i===idx?'current':'')}">
-      <div class="dot">${i<idx?'✓':s.icon}</div><span>${s.label}</span>
-    </div>`).join("") + `</div>`;
-
-  if(job.status==="cancelled"){
-    progressHTML = `<div class="chip" style="background:rgba(255,84,112,.15);color:var(--red);padding:10px 16px;">❌ Yeh job cancel/unable-to-complete ke tor par band ho chuki hai</div>`;
   }
 
-  let pricingHTML = "";
-  if(job.pricing){
-    const p = job.pricing;
-    if(p.type==="before"){
-      pricingHTML = `<div class="pricing-box">
-        <h4 style="margin-bottom:10px;font-size:.92rem;">Price before visit</h4>
-        <div class="price-line"><span>Material cost</span><span>${money(p.material)}</span></div>
-        <div class="price-line"><span>Labor cost</span><span>${money(p.labor)}</span></div>
-        <div class="price-line total"><span>Total estimate</span><span>${money(p.total)}</span></div>
-        ${p.accepted===undefined ? (isUstaadView? `<p style="margin-top:10px;font-size:.8rem;">Customer ki response ka intezaar hai...</p>` :
-          `<div class="tracker-actions"><button class="btn btn-primary" data-accept-price="1">estimate accept karein</button><button class="btn btn-outline" data-decline-price="1">decline karein</button></div>`) :
-          p.accepted ? `<div class="chip chip-green">✅ Customer ne estimate accept kar liya</div>` : `<div class="chip" style="background:rgba(255,84,112,.15);color:var(--red);">❌ Customer ne estimate decline kar diya</div>`}
-      </div>`;
-    } else if(p.type==="after"){
-      pricingHTML = `<div class="pricing-box"><h4 style="margin-bottom:6px;font-size:.92rem;">Price after inspection</h4><p style="font-size:.82rem;">Ustaad location par pahunch kar final price discuss karega.</p></div>`;
-    }
-    if(p.final){
-      pricingHTML += `<div class="pricing-box">
-        <h4 style="margin-bottom:10px;font-size:.92rem;">Final bill</h4>
-        <div class="price-line"><span>Material cost</span><span>${money(p.final.material)}</span></div>
-        <div class="price-line"><span>Labor cost</span><span>${money(p.final.labor)}</span></div>
-        <div class="price-line total"><span>Final amount</span><span>${money(p.final.total)}</span></div>
-        <p style="margin-top:10px;font-size:.78rem;color:var(--slate-dim)">💳 Payment direct customer aur ustaad ke darmiyan hoti hai (cash / EasyPaisa / JazzCash / bank). Kaam Krwao payment collect ya transfer nahi karta — yeh amount sirf record ke liye hai.</p>
-      </div>`;
-    }
-  }
-
-  let actionsHTML = buildTrackerActions(job, isUstaadView);
-
-  wrap.innerHTML = `
-    <div class="tracker-head">
-      <div>
-        <span class="eyebrow">${cat?cat.icon+" "+cat.name:""} job</span>
-        <h2 style="margin-top:4px;">${job.description ? job.description.slice(0,60) : "Service request"}</h2>
-        <p style="margin-top:6px;">${job.location}</p>
-      </div>
-      ${u? `<div style="display:flex;align-items:center;gap:10px;">
-        <img src="${u.photo}" style="width:46px;height:46px;border-radius:12px;object-fit:cover;">
-        <div><div style="font-weight:600">${u.name}</div><div style="font-size:.78rem;color:var(--slate-dim)">${u.skillName}</div></div>
-      </div>`:""}
-    </div>
-    ${progressHTML}
-    ${job.photos && job.photos.length ? `<div class="job-photo-row">${job.photos.map(p=>`<img src="${p}">`).join("")}</div>` : ""}
-    ${pricingHTML}
-    ${actionsHTML}
-    <div class="tracker-actions" style="margin-top:18px;">
-      ${u? `<button class="btn btn-outline" id="openChatBtn">💬 chat karein</button>`:""}
-    </div>
-  `;
-
-  const chatBtn = document.getElementById("openChatBtn");
-  if(chatBtn) chatBtn.addEventListener("click", ()=>openChatModal(job.id));
-
-  wireTrackerActions(job, isUstaadView);
 }
 
-function buildTrackerActions(job, isUstaadView){
-  if(job.status==="cancelled" || job.status==="completed") return "";
-  if(!isUstaadView){
-    // customer-side: waiting mostly, except pricing accept/decline handled above
-    if(job.status==="selected") return `<p class="empty-note">Ustaad pricing set kar raha hai, thodi der intezaar karein...</p>`;
-    return "";
-  }
-  // ustaad-side actionable buttons
-  const html = [];
-  if(job.status==="selected" && !job.pricing){
-    html.push(`<div class="tracker-actions" style="flex-direction:column;align-items:stretch;gap:14px;">
-      <p style="font-size:.85rem;">Pricing method chunein:</p>
-      <div style="display:flex;gap:10px;">
-        <button class="btn btn-outline" style="flex:1" data-set-pricing="before">Price before visit</button>
-        <button class="btn btn-outline" style="flex:1" data-set-pricing="after">Price after inspection</button>
-      </div>
-    </div>`);
-  }
-  if(job.status==="selected" && job.pricing && job.pricing.type==="before" && job.pricing.accepted===undefined){
-    html.push(`<p class="empty-note">Customer ki response ka intezaar hai...</p>`);
-  }
-  if(job.status==="selected" && job.pricing && (job.pricing.type==="after" || job.pricing.accepted===true)){
-    html.push(`<div class="tracker-actions"><button class="btn btn-primary" data-set-arrival="1">arrival time set karein aur travel start karein</button></div>`);
-  }
-  if(job.status==="accepted"){
-    html.push(`<div class="tracker-actions"><button class="btn btn-primary" data-advance="on_the_way">on the way — travel start</button></div>`);
-  }
-  if(job.status==="on_the_way"){
-    html.push(`<div class="tracker-actions"><button class="btn btn-primary" data-advance="reached">reached destination</button></div>`);
-  }
-  if(job.status==="reached"){
-    html.push(`<div class="tracker-actions">
-      <button class="btn btn-primary" data-advance="in_progress">work start karein</button>
-      <button class="btn btn-outline" data-cannot-complete="1">customer agree nahi / kaam nahi ho saka</button>
-    </div>`);
-  }
-  if(job.status==="in_progress"){
-    html.push(`<div class="tracker-actions">
-      <button class="btn btn-primary" data-work-complete="1">work completed</button>
-      <button class="btn btn-outline" data-cannot-complete="1">customer agree nahi / kaam nahi ho saka</button>
-    </div>`);
-  }
-  return html.join("");
-}
 
-function wireTrackerActions(job, isUstaadView){
-  const wrap = document.getElementById("trackerWrap");
+function loadState(){
 
-  wrap.querySelectorAll("[data-accept-price]").forEach(b=>b.addEventListener("click",()=>{
-    updateJob(job.id, j=>{ j.pricing.accepted = true; j.status="accepted"; });
-    toast("Estimate accept ho gaya","Ustaad ab arrival time set karega.","success","✅");
-    renderTracker(job.id);
-  }));
-  wrap.querySelectorAll("[data-decline-price]").forEach(b=>b.addEventListener("click",()=>{
-    updateJob(job.id, j=>{ j.pricing.accepted = false; j.status="cancelled"; });
-    toast("Estimate decline kar diya","Job cancel ho gayi hai.","error","❌");
-    renderTracker(job.id);
-  }));
-  wrap.querySelectorAll("[data-set-pricing]").forEach(b=>b.addEventListener("click",()=>{
-    const type = b.getAttribute("data-set-pricing");
-    if(type==="before"){ openPricingBeforeModal(job.id); }
-    else{
-      updateJob(job.id, j=>{ j.pricing = {type:"after"}; });
-      toast("Pricing set ho gayi","Price after inspection decide hogi.","success","📝");
-      renderTracker(job.id);
-    }
-  }));
-  wrap.querySelectorAll("[data-set-arrival]").forEach(b=>b.addEventListener("click",()=>{
-    openArrivalModal(job.id);
-  }));
-  wrap.querySelectorAll("[data-advance]").forEach(b=>b.addEventListener("click",()=>{
-    const next = b.getAttribute("data-advance");
-    updateJob(job.id, j=> j.status = next);
-    toast("Status update", "Job status: "+next.replace("_"," "), "success","🚚");
-    renderTracker(job.id);
-    refreshAllDashboards();
-  }));
-  wrap.querySelectorAll("[data-work-complete]").forEach(b=>b.addEventListener("click",()=>{
-    openCompleteJobModal(job.id);
-  }));
-  wrap.querySelectorAll("[data-cannot-complete]").forEach(b=>b.addEventListener("click",()=>{
-    openCannotCompleteModal(job.id);
-  }));
-}
+  try{
 
-function updateJob(jobId, mutator){
-  const jobs = DB.get("jobs",[]);
-  const job = jobs.find(j=>j.id===jobId);
-  if(job) mutator(job);
-  DB.set("jobs", jobs);
-}
+    const saved =
+      localStorage.getItem("kaamKrwaoJobs");
 
-function openPricingBeforeModal(jobId){
-  openModal(`
-    <span class="modal-close" data-close-modal>✕</span>
-    <h3>Price before visit</h3>
-    <label class="field"><span>Material cost (Rs.)</span><input type="number" id="pbMaterial" min="0" placeholder="e.g. 800"></label>
-    <label class="field"><span>Labor cost (Rs.)</span><input type="number" id="pbLabor" min="0" placeholder="e.g. 500"></label>
-    <button class="btn btn-primary full" id="pbSubmit">estimate customer ko bhejein</button>
-  `);
-  document.getElementById("pbSubmit").addEventListener("click", ()=>{
-    const material = +document.getElementById("pbMaterial").value || 0;
-    const labor = +document.getElementById("pbLabor").value || 0;
-    if(material+labor<=0){ toast("Amount darj karein","Material ya labor cost zaroori hai.","error","⚠️"); return; }
-    updateJob(jobId, j=>{ j.pricing = {type:"before", material, labor, total:material+labor}; });
-    closeModal();
-    toast("Estimate bhej diya","Customer ke response ka intezaar karein.","success","📤");
-    renderTracker(jobId);
-  });
-}
+    if(saved){
 
-function openArrivalModal(jobId){
-  openModal(`
-    <span class="modal-close" data-close-modal>✕</span>
-    <h3>Arrival time set karein</h3>
-    <label class="field"><span>Aap kab pahunchenge?</span>
-      <select id="arrivalTime">
-        <option>15 minutes mein</option><option>30 minutes mein</option><option>1 ghantay mein</option><option>Aaj shaam</option>
-      </select>
-    </label>
-    <button class="btn btn-primary full" id="arrivalSubmit">confirm karein aur travel start karein</button>
-  `);
-  document.getElementById("arrivalSubmit").addEventListener("click", ()=>{
-    const time = document.getElementById("arrivalTime").value;
-    updateJob(jobId, j=>{ j.status="accepted"; j.arrivalTime=time; });
-    closeModal();
-    toast("Arrival confirm","Aap "+time+" pahunch rahe hain.","success","🚗");
-    renderTracker(jobId);
-    refreshAllDashboards();
-  });
-}
+      const parsed =
+        JSON.parse(saved);
 
-function openCompleteJobModal(jobId){
-  openModal(`
-    <span class="modal-close" data-close-modal>✕</span>
-    <h3>Work completed — final bill</h3>
-    <label class="field"><span>Material cost (Rs.)</span><input type="number" id="fMaterial" min="0"></label>
-    <label class="field"><span>Labor cost (Rs.)</span><input type="number" id="fLabor" min="0"></label>
-    <p style="font-size:.78rem;color:var(--slate-dim);margin:6px 0 14px;">Payment customer se direct li jayegi (cash/EasyPaisa/JazzCash/bank). Yeh sirf record hoga.</p>
-    <button class="btn btn-primary full" id="fSubmit">kaam mukammal karein</button>
-  `);
-  document.getElementById("fSubmit").addEventListener("click", ()=>{
-    const material = +document.getElementById("fMaterial").value || 0;
-    const labor = +document.getElementById("fLabor").value || 0;
-    updateJob(jobId, j=>{
-      j.pricing = j.pricing || {};
-      j.pricing.final = {material,labor,total:material+labor};
-      j.status = "completed";
-      j.completedAt = Date.now();
-    });
-    // bump ustaad earnings
-    bumpUstaadEarnings(jobId, material+labor);
-    closeModal();
-    toast("Kaam mukammal!","Customer ko review ke liye notify kar diya gaya hai.","success","🎉");
-    renderTracker(jobId);
-    refreshAllDashboards();
-    setTimeout(()=> maybeShowRatingModal(jobId), 900);
-  });
-}
+      if(Array.isArray(parsed)){
 
-function openCannotCompleteModal(jobId){
-  const jobs = DB.get("jobs",[]);
-  const job = jobs.find(j=>j.id===jobId);
-  const fee = job.applicants.find(a=>a.ustaadId===job.selectedUstaadId)?.ustaad.visitingFee || 0;
-  openModal(`
-    <span class="modal-close" data-close-modal>✕</span>
-    <h3>Customer agree nahi / kaam nahi ho saka</h3>
-    <p style="margin-bottom:14px;">Is case mein sirf visiting fee applicable hogi, jo customer se direct li jayegi.</p>
-    <div class="pricing-box"><div class="price-line total"><span>Visiting fee</span><span>${money(fee)}</span></div></div>
-    <label class="field" style="margin-top:14px;"><span>Reason (optional)</span><textarea id="ccReason" rows="3" placeholder="e.g. customer ne price par agree nahi kiya"></textarea></label>
-    <button class="btn btn-primary full" id="ccSubmit">confirm karein</button>
-  `);
-  document.getElementById("ccSubmit").addEventListener("click", ()=>{
-    updateJob(jobId, j=>{ j.status="cancelled"; j.cancelReason = document.getElementById("ccReason").value.trim(); j.visitingFeeCharged = fee; });
-    closeModal();
-    toast("Job band kar di gayi","Sirf visiting fee record ki gayi hai.","default","🔕");
-    renderTracker(jobId);
-    refreshAllDashboards();
-  });
-}
+        state.jobs = parsed;
 
-function bumpUstaadEarnings(jobId, amount){
-  const profile = DB.get("ustaadProfile");
-  const jobs = DB.get("jobs",[]);
-  const job = jobs.find(j=>j.id===jobId);
-  if(profile && job && job.selectedUstaadId===profile.id){
-    profile.monthlyEarnings = (profile.monthlyEarnings||0)+amount;
-    profile.totalEarnings = (profile.totalEarnings||0)+amount;
-    profile.completedJobs = (profile.completedJobs||0)+1;
-    DB.set("ustaadProfile", profile);
-  }
-}
-
-function maybeShowRatingModal(jobId){
-  const jobs = DB.get("jobs",[]);
-  const job = jobs.find(j=>j.id===jobId);
-  if(!job || job.status!=="completed" || job.rated) return;
-  const u = job.applicants.find(a=>a.ustaadId===job.selectedUstaadId).ustaad;
-  let rating = 0;
-  openModal(`
-    <span class="modal-close" data-close-modal>✕</span>
-    <h3 style="text-align:center;">Service kaisi rahi?</h3>
-    <p style="text-align:center;">${u.name} ne aapka kaam mukammal kar diya hai</p>
-    <div class="star-rate" id="starRate">${[1,2,3,4,5].map(n=>`<span data-star="${n}">★</span>`).join("")}</div>
-    <label class="field"><span>Review (optional)</span><textarea id="reviewText" rows="3" placeholder="Apna tajurba likhein..."></textarea></label>
-    <div style="display:flex;gap:10px;margin:12px 0;">
-      <button class="btn btn-outline full" id="problemNo">masla solve nahi hua</button>
-      <button class="btn btn-outline full" id="problemYes">✅ masla solve ho gaya</button>
-    </div>
-    <button class="btn btn-primary full" id="reviewSubmit">review submit karein</button>
-  `);
-  let solved = true;
-  document.getElementById("problemYes").onclick=()=>{solved=true;toast("Great!","Shukriya feedback ke liye.","success","😊");};
-  document.getElementById("problemNo").onclick=()=>{solved=false;toast("Noted","Hume afsos hai, feedback save ho gaya.","default","😕");};
-  document.querySelectorAll("#starRate span").forEach(s=>{
-    s.addEventListener("click", ()=>{
-      rating = +s.getAttribute("data-star");
-      document.querySelectorAll("#starRate span").forEach(x=> x.classList.toggle("active", +x.getAttribute("data-star")<=rating));
-    });
-  });
-  document.getElementById("reviewSubmit").addEventListener("click", ()=>{
-    if(!rating){ toast("Rating den","Kam az kam ek star select karein.","error","⚠️"); return; }
-    updateJob(jobId, j=>{ j.rated=true; j.rating=rating; j.review=document.getElementById("reviewText").value.trim(); j.problemSolved=solved; });
-    closeModal();
-    toast("Shukriya!","Aapki review save ho gayi hai.","success","🌟");
-    refreshAllDashboards();
-  });
-}
-
-/* ==========================================================
-   CUSTOMER DASHBOARD
-   ========================================================== */
-function renderCustomerDashboard(){
-  const customer = DB.get("customer");
-  document.getElementById("custName").textContent = customer.name.split(" ")[0];
-  const jobs = DB.get("jobs",[]);
-  const active = jobs.filter(j=> !["completed","cancelled"].includes(j.status));
-  const done = jobs.filter(j=> ["completed","cancelled"].includes(j.status));
-
-  document.getElementById("kpiActive").textContent = active.length;
-  document.getElementById("kpiSelected").textContent = jobs.filter(j=>j.selectedUstaadId).length;
-  document.getElementById("kpiCompleted").textContent = jobs.filter(j=>j.status==="completed").length;
-  document.getElementById("kpiReviews").textContent = jobs.filter(j=>j.rated).length;
-
-  const activeBox = document.getElementById("custActiveJobs");
-  activeBox.innerHTML = active.length ? active.map(j=>jobCardHTML(j,"customer")).join("") : `<p class="empty-note">Koi active request nahi hai.</p>`;
-  const histBox = document.getElementById("custHistoryJobs");
-  histBox.innerHTML = done.length ? done.map(j=>jobCardHTML(j,"customer")).join("") : `<p class="empty-note">Abhi tak koi completed job nahi.</p>`;
-
-  wireJobCardClicks("customer");
-}
-
-function jobCardHTML(job, mode){
-  const cat = CATEGORIES.find(c=>c.id===job.category);
-  const u = job.selectedUstaadId ? job.applicants.find(a=>a.ustaadId===job.selectedUstaadId)?.ustaad : null;
-  let statusClass="status-new", statusLabel=job.status.replace("_"," ");
-  if(["accepted","on_the_way","reached","in_progress"].includes(job.status)) statusClass="status-progress";
-  if(job.status==="completed") statusClass="status-done";
-  if(job.status==="cancelled") statusClass="status-cancelled";
-  if(job.status==="open") statusLabel="applicants dekhein";
-  if(job.status==="finding") statusLabel="finding ustaads";
-
-  return `<div class="job-card" data-job-click="${job.id}" data-mode="${mode}">
-    <div class="job-card-left">
-      <h4>${cat?cat.icon+" "+cat.name:"Service"} ${u? "— "+u.name:""}</h4>
-      <p>${job.location || ""} ${job.description ? " · "+job.description.slice(0,40) : ""}</p>
-    </div>
-    <span class="job-card-status ${statusClass}">${statusLabel}</span>
-  </div>`;
-}
-
-function wireJobCardClicks(mode){
-  document.querySelectorAll("[data-job-click]").forEach(card=>{
-    card.addEventListener("click", ()=>{
-      const jobId = card.getAttribute("data-job-click");
-      const jobs = DB.get("jobs",[]);
-      const job = jobs.find(j=>j.id===jobId);
-      if(!job) return;
-      if(job.status==="finding"){ showView("finding",{jobId}); runFindingSimulation.paused=true; return; }
-      if(job.status==="open"){ showView("compare",{jobId}); return; }
-      showView("tracker", {jobId, mode});
-      navContext.mode = mode;
-    });
-  });
-}
-
-/* ==========================================================
-   USTAAD: APPLICATION FLOW
-   ========================================================== */
-let uStep = 1;
-let uDraft = {photos:{}};
-
-function renderUstaadApply(){
-  uStep=1; uDraft={photos:{}};
-  document.getElementById("ustaadForm").reset();
-  ["uPhotoPreview","uCnicFrontPreview","uCnicBackPreview","uPolicePreview"].forEach(id=>document.getElementById(id).innerHTML="");
-  updateUStepper();
-  const grid = document.getElementById("uSkillGrid");
-  grid.innerHTML = CATEGORIES.map(c=>`<div class="cat-select" data-cat="${c.id}"><div class="cat-icon">${c.icon}</div><h4>${c.name}</h4></div>`).join("");
-  grid.querySelectorAll(".cat-select").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      grid.querySelectorAll(".cat-select").forEach(x=>x.classList.remove("selected"));
-      el.classList.add("selected");
-      uDraft.skill = el.getAttribute("data-cat");
-    });
-  });
-}
-
-function wireFileField(inputId, previewId, key){
-  document.getElementById(inputId).addEventListener("change",(e)=>{
-    const preview = document.getElementById(previewId);
-    preview.innerHTML="";
-    const f = e.target.files[0];
-    if(!f) return;
-    uDraft.photos[key] = f.name;
-    if(f.type.startsWith("image/")){
-      const img = document.createElement("img"); img.src=URL.createObjectURL(f); preview.appendChild(img);
-    } else {
-      const chip = document.createElement("div"); chip.className="file-chip"; chip.textContent="📄 "+f.name; preview.appendChild(chip);
-    }
-  });
-}
-wireFileField("uPhoto","uPhotoPreview","profilePhoto");
-wireFileField("uCnicFront","uCnicFrontPreview","cnicFront");
-wireFileField("uCnicBack","uCnicBackPreview","cnicBack");
-wireFileField("uPolice","uPolicePreview","police");
-
-function updateUStepper(){
-  document.querySelectorAll("#ustaadStepper .step").forEach(s=>{
-    const n = +s.getAttribute("data-step");
-    s.classList.toggle("active", n===uStep);
-    s.classList.toggle("done", n<uStep);
-  });
-  document.querySelectorAll("#ustaadForm .form-step").forEach(s=>{
-    s.classList.toggle("active", +s.getAttribute("data-step")===uStep);
-  });
-  document.getElementById("uPrev").style.visibility = uStep===1?"hidden":"visible";
-  document.getElementById("uNext").classList.toggle("hidden", uStep===4);
-  document.getElementById("uSubmit").classList.toggle("hidden", uStep!==4);
-  if(uStep===4) buildUstaadReview();
-}
-
-function buildUstaadReview(){
-  uDraft.fullName = document.getElementById("uFullName").value.trim();
-  uDraft.phone = document.getElementById("uPhone").value.trim();
-  uDraft.cnic = document.getElementById("uCnic").value.trim();
-  uDraft.experience = document.getElementById("uExp").value;
-  uDraft.city = document.getElementById("uCity").value;
-  uDraft.areas = document.getElementById("uAreas").value.trim();
-  uDraft.visitingFee = document.getElementById("uVisitingFee").value;
-  uDraft.guarantee = document.getElementById("uGuarantee").value;
-  const cat = CATEGORIES.find(c=>c.id===uDraft.skill);
-  const box = document.getElementById("ustaadReviewBox");
-  box.innerHTML = `
-    <div class="review-row"><span>Full name</span><span>${uDraft.fullName||"—"}</span></div>
-    <div class="review-row"><span>Phone</span><span>${uDraft.phone||"—"}</span></div>
-    <div class="review-row"><span>CNIC</span><span>${uDraft.cnic||"—"}</span></div>
-    <div class="review-row"><span>Skill</span><span>${cat?cat.icon+" "+cat.name:"—"}</span></div>
-    <div class="review-row"><span>Experience</span><span>${uDraft.experience||0} saal</span></div>
-    <div class="review-row"><span>City / Areas</span><span>${uDraft.city}, ${uDraft.areas||"—"}</span></div>
-    <div class="review-row"><span>Visiting fee</span><span>${uDraft.visitingFee?money(uDraft.visitingFee):"—"}</span></div>
-    <div class="review-row"><span>Guarantee</span><span>${uDraft.guarantee}</span></div>
-    <div class="review-row"><span>Documents</span><span>${Object.keys(uDraft.photos).length}/4 uploaded</span></div>
-  `;
-}
-
-document.getElementById("uNext").addEventListener("click",()=>{
-  if(uStep===1){
-    const name=document.getElementById("uFullName").value.trim(), phone=document.getElementById("uPhone").value.trim(), cnic=document.getElementById("uCnic").value.trim();
-    if(!name||!phone||!cnic){ toast("Fields mukammal karein","Naam, phone aur CNIC zaroori hain.","error","⚠️"); return; }
-  }
-  if(uStep===2 && !uDraft.skill){ toast("Skill chunain","Apni skill select karein.","error","⚠️"); return; }
-  uStep = Math.min(4, uStep+1);
-  updateUStepper();
-});
-document.getElementById("uPrev").addEventListener("click",()=>{ uStep=Math.max(1,uStep-1); updateUStepper(); });
-
-document.getElementById("ustaadForm").addEventListener("submit",(e)=>{
-  e.preventDefault();
-  buildUstaadReview();
-  if(Object.keys(uDraft.photos).length<4){ toast("Documents zaroori hain","Sab 4 documents upload karein (profile photo, CNIC front/back, police verification).","error","⚠️"); return; }
-  const profile = {
-    id: uid("ustself"),
-    name: uDraft.fullName, phone: uDraft.phone, cnic: uDraft.cnic,
-    skill: uDraft.skill, skillName: (CATEGORIES.find(c=>c.id===uDraft.skill)||{}).name,
-    experience: +uDraft.experience||0, city: uDraft.city, areas: uDraft.areas,
-    visitingFee: +uDraft.visitingFee||0, guarantee: uDraft.guarantee,
-    photo: avatarUrl(randInt(1,70)),
-    status:"pending", // pending -> verified -> rejected
-    membershipActive:false,
-    online:false,
-    rating:0, completedJobs:0, responseRate:randInt(85,98),
-    monthlyEarnings:0, totalEarnings:0,
-    createdAt: Date.now(),
-  };
-  DB.set("ustaadProfile", profile);
-  toast("Application submit ho gayi","Verification process shuru ho rahi hai.","success","📨");
-  showView("ustaad-verification");
-});
-
-/* ---------- VERIFICATION SIMULATION ---------- */
-function renderUstaadVerification(){
-  const profile = DB.get("ustaadProfile");
-  const card = document.getElementById("verifyCard");
-  if(!profile){ card.innerHTML = `<p>Koi application nahi mili.</p>`; return; }
-
-  if(profile.status==="pending"){
-    card.innerHTML = `
-      <div class="verify-icon">🕒</div>
-      <h2>Verification in progress...</h2>
-      <p>Aapki documents ka review ho raha hai. Ismein CNIC match, police verification aur profile check shamil hai.</p>
-      <div class="verify-progress"><div class="verify-progress-bar" id="verifyBar"></div></div>
-      <p id="verifyStatusText" style="font-size:.82rem;">Documents scan ho rahe hain...</p>
-    `;
-    let pct = 0;
-    const bar = document.getElementById("verifyBar");
-    const text = document.getElementById("verifyStatusText");
-    const msgs = ["Documents scan ho rahe hain...","CNIC verify ki ja rahi hai...","Police verification check ho raha hai...","Profile ko finalize kiya ja raha hai..."];
-    let mi=0;
-    const iv = setInterval(()=>{
-      pct += randInt(12,22);
-      if(pct>=100){ pct=100; clearInterval(iv); }
-      bar.style.width = pct+"%";
-      if(mi<msgs.length-1 && pct> (mi+1)*22) mi++;
-      text.textContent = msgs[mi];
-      if(pct===100){
-        setTimeout(()=>{
-          const p = DB.get("ustaadProfile");
-          // 90% approval simulation
-          p.status = Math.random()<0.9 ? "verified" : "rejected";
-          DB.set("ustaadProfile", p);
-          renderUstaadVerification();
-        }, 700);
       }
-    }, 500);
-  } else if(profile.status==="verified"){
-    card.innerHTML = `
-      <div class="verify-icon">✅</div>
-      <h2>Mubarak ho, aap verified hain!</h2>
-      <p>Aapki documents successfully verify ho gayi hain. Ab membership activate karke apna profile live karein.</p>
-      <button class="btn btn-primary btn-lg" id="goMembership">membership activate karein →</button>
-    `;
-    document.getElementById("goMembership").addEventListener("click", ()=> showView("ustaad-membership"));
-  } else {
-    card.innerHTML = `
-      <div class="verify-icon">❌</div>
-      <h2>Application reject ho gayi</h2>
-      <p>Bad-qismati se aapki documents verify nahi ho sakin. Dobara sahi documents ke sath apply karein.</p>
-      <button class="btn btn-primary btn-lg" id="reapply">dobara apply karein</button>
-    `;
-    document.getElementById("reapply").addEventListener("click", ()=>{ DB.set("ustaadProfile", null); showView("ustaad-apply"); });
+
+    }
+
+  }catch(error){
+
+    console.warn(
+      "Could not load jobs:",
+      error
+    );
+
   }
+
 }
 
-/* ---------- MEMBERSHIP PAYMENT ---------- */
-let selectedPayMethod = "easypaisa";
-function renderUstaadMembership(){
-  selectedPayMethod="easypaisa";
-  document.querySelectorAll(".pay-method").forEach(b=>b.classList.toggle("active", b.getAttribute("data-method")===selectedPayMethod));
-  renderPayForm();
-}
-document.getElementById("payMethods").addEventListener("click",(e)=>{
-  const btn = e.target.closest(".pay-method");
-  if(!btn) return;
-  selectedPayMethod = btn.getAttribute("data-method");
-  document.querySelectorAll(".pay-method").forEach(b=>b.classList.toggle("active", b===btn));
-  renderPayForm();
-});
-function renderPayForm(){
-  const form = document.getElementById("payForm");
-  if(selectedPayMethod==="bank"){
-    form.innerHTML = `<label class="field"><span>Account title</span><input type="text" placeholder="Your full name"></label>
-    <label class="field"><span>Bank</span><input type="text" placeholder="e.g. Meezan Bank"></label>`;
-  } else {
-    form.innerHTML = `<label class="field"><span>${selectedPayMethod==='easypaisa'?'EasyPaisa':'JazzCash'} number</span><input type="tel" placeholder="03XX-XXXXXXX"></label>
-    <label class="field"><span>PIN (demo — koi bhi 4 digit)</span><input type="password" maxlength="4" placeholder="••••"></label>`;
+
+/* =========================================================
+   TOAST
+   ========================================================= */
+
+function toast(message, type = "success"){
+
+  const stack =
+    $("#toastStack");
+
+  if(!stack){
+
+    alert(message);
+    return;
+
   }
+
+
+  const item =
+    document.createElement("div");
+
+  item.className =
+    `toast toast-${type}`;
+
+  item.textContent =
+    message;
+
+  stack.appendChild(item);
+
+
+  requestAnimationFrame(() => {
+
+    item.classList.add("show");
+
+  });
+
+
+  setTimeout(() => {
+
+    item.classList.remove("show");
+
+    setTimeout(() => {
+
+      item.remove();
+
+    }, 250);
+
+  }, 3000);
+
 }
-document.getElementById("payNowBtn").addEventListener("click",()=>{
-  const btn = document.getElementById("payNowBtn");
-  btn.disabled = true; btn.textContent = "processing payment...";
-  setTimeout(()=>{
-    const profile = DB.get("ustaadProfile");
-    profile.membershipActive = true;
-    profile.membershipMethod = selectedPayMethod;
-    profile.membershipDate = Date.now();
-    profile.online = true;
-    DB.set("ustaadProfile", profile);
-    btn.disabled=false; btn.textContent="Rs. 2,500 pay karein";
-    toast("Membership activate ho gayi!","Aapka profile ab customers ko dikh raha hai.","success","🎉");
-    showView("ustaad-dashboard");
-  }, 1600);
-});
 
-/* ==========================================================
-   USTAAD DASHBOARD
-   ========================================================== */
-function renderUstaadDashboard(){
-  const profile = DB.get("ustaadProfile");
-  if(!profile) return;
-  document.getElementById("ustaadName").textContent = profile.name.split(" ")[0];
-  const badge = document.getElementById("ustaadBadge");
-  badge.textContent = profile.status==="verified" ? "verified" : profile.status;
-  badge.className = "badge "+(profile.status==="verified"?"badge-verified":profile.status==="pending"?"badge-pending":"badge-rejected");
 
-  const toggle = document.getElementById("onlineToggle");
-  toggle.classList.toggle("on", !!profile.online);
-  document.getElementById("onlineLabel").textContent = profile.online?"online":"offline";
-  toggle.onclick = ()=>{
-    profile.online = !profile.online;
-    DB.set("ustaadProfile", profile);
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
+
+function navigate(viewName){
+
+  if(!viewName){
+    return;
+  }
+
+
+  const views =
+    $$(".view");
+
+  views.forEach(view => {
+
+    view.classList.remove("active");
+
+  });
+
+
+  const target =
+    $(`#view-${viewName}`);
+
+  if(!target){
+
+    console.warn(
+      `View not found: ${viewName}`
+    );
+
+    return;
+
+  }
+
+
+  target.classList.add("active");
+
+  state.currentView =
+    viewName;
+
+
+  window.scrollTo({
+    top:0,
+    behavior:"smooth"
+  });
+
+
+  closeMobileMenu();
+
+
+  if(viewName === "customer-dashboard"){
+
+    renderCustomerDashboard();
+
+  }
+
+
+  if(viewName === "ustaad-dashboard"){
+
     renderUstaadDashboard();
+
+  }
+
+
+  refresh3DScene();
+
+}
+
+
+/* =========================================================
+   NAVIGATION EVENTS
+   ========================================================= */
+
+function setupNavigation(){
+
+  $$("[data-nav]").forEach(element => {
+
+    element.addEventListener(
+      "click",
+      event => {
+
+        event.preventDefault();
+
+        const target =
+          element.dataset.nav;
+
+        navigate(target);
+
+      }
+    );
+
+  });
+
+
+  $$(".nav-link[href^='#']").forEach(link => {
+
+    link.addEventListener(
+      "click",
+      event => {
+
+        const target =
+          link.getAttribute("href");
+
+        if(!target){
+          return;
+        }
+
+        const section =
+          $(target);
+
+        if(section){
+
+          event.preventDefault();
+
+          const offset =
+            section.getBoundingClientRect().top +
+            window.scrollY -
+            80;
+
+          window.scrollTo({
+
+            top:offset,
+
+            behavior:"smooth"
+
+          });
+
+        }
+
+      }
+    );
+
+  });
+
+}
+
+
+/* =========================================================
+   MOBILE MENU
+   ========================================================= */
+
+function setupMobileMenu(){
+
+  const burger =
+    $("#navBurger");
+
+  const nav =
+    $("#navLinks");
+
+  if(!burger || !nav){
+    return;
+  }
+
+
+  burger.addEventListener(
+    "click",
+    () => {
+
+      const open =
+        nav.classList.toggle("mobile-open");
+
+      burger.setAttribute(
+        "aria-expanded",
+        String(open)
+      );
+
+    }
+  );
+
+}
+
+
+function closeMobileMenu(){
+
+  const nav =
+    $("#navLinks");
+
+  const burger =
+    $("#navBurger");
+
+  if(nav){
+
+    nav.classList.remove(
+      "mobile-open"
+    );
+
+  }
+
+  if(burger){
+
+    burger.setAttribute(
+      "aria-expanded",
+      "false"
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   JOB FORM
+   ========================================================= */
+
+function setupJobForm(){
+
+  const form =
+    $("#postJobForm");
+
+  if(!form){
+    return;
+  }
+
+
+  form.addEventListener(
+    "submit",
+    event => {
+
+      event.preventDefault();
+
+
+      const formData =
+        new FormData(form);
+
+
+      const job = {
+
+        id:
+          Date.now(),
+
+        title:
+          formData.get("jobTitle")?.trim() ||
+          "Untitled Job",
+
+        category:
+          formData.get("jobCategory") ||
+          "other",
+
+        description:
+          formData.get("jobDescription")?.trim() ||
+          "",
+
+        location:
+          formData.get("jobLocation")?.trim() ||
+          "",
+
+        budget:
+          Number(
+            formData.get("jobBudget") || 0
+          ),
+
+        urgency:
+          formData.get("jobUrgency") ||
+          "normal",
+
+        status:
+          "posted",
+
+        createdAt:
+          new Date().toISOString()
+
+      };
+
+
+      state.jobs.unshift(job);
+
+      saveState();
+
+      form.reset();
+
+
+      toast(
+        "Job successfully post ho gaya! 🎉"
+      );
+
+
+      renderCustomerDashboard();
+
+
+      setTimeout(() => {
+
+        navigate(
+          "customer-dashboard"
+        );
+
+      }, 350);
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   CUSTOMER DASHBOARD
+   ========================================================= */
+
+function renderCustomerDashboard(){
+
+  const active =
+    state.jobs.filter(
+      job =>
+        job.status === "posted" ||
+        job.status === "active"
+    );
+
+  const completed =
+    state.jobs.filter(
+      job =>
+        job.status === "completed"
+    );
+
+
+  const activeElement =
+    $("#cKpiActive");
+
+  const completedElement =
+    $("#cKpiCompleted");
+
+  const chosenElement =
+    $("#cKpiChosen");
+
+  const reviewsElement =
+    $("#cKpiReviews");
+
+
+  if(activeElement){
+
+    activeElement.textContent =
+      active.length;
+
+  }
+
+
+  if(completedElement){
+
+    completedElement.textContent =
+      completed.length;
+
+  }
+
+
+  if(chosenElement){
+
+    chosenElement.textContent =
+      state.jobs.filter(
+        job =>
+          job.status === "accepted"
+      ).length;
+
+  }
+
+
+  if(reviewsElement){
+
+    reviewsElement.textContent =
+      completed.length;
+
+  }
+
+
+  const container =
+    $("#customerJobs");
+
+  if(!container){
+    return;
+  }
+
+
+  if(!state.jobs.length){
+
+    container.innerHTML = `
+
+      <p class="empty-note">
+
+        Abhi koi job post nahi ki.
+
+      </p>
+
+    `;
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    state.jobs
+      .map(renderCustomerJob)
+      .join("");
+
+}
+
+
+function renderCustomerJob(job){
+
+  const statusMap = {
+
+    posted:
+      "🟠 Posted",
+
+    active:
+      "🔵 Active",
+
+    accepted:
+      "🟣 Ustaad Selected",
+
+    completed:
+      "🟢 Completed"
+
   };
 
-  // gather jobs relevant to this ustaad (matched by skill, simulate as if this is one of the pool ustaads assigned)
-  const jobs = DB.get("jobs",[]);
-  const skillJobs = jobs.filter(j=>j.category===profile.skill);
-  const newReq = skillJobs.filter(j=> j.status==="open" && !j.selectedUstaadId);
-  const active = skillJobs.filter(j=> j.selectedUstaadId && !["completed","cancelled"].includes(j.status) && isThisUstaadInvolved(j, profile));
-  const completed = skillJobs.filter(j=> j.status==="completed" && isThisUstaadInvolved(j, profile));
 
-  document.getElementById("uKpiNew").textContent = newReq.length;
-  document.getElementById("uKpiActive").textContent = active.length;
-  document.getElementById("uKpiCompleted").textContent = profile.completedJobs || completed.length;
-  document.getElementById("uKpiMonthly").textContent = money(profile.monthlyEarnings||0);
-  document.getElementById("uKpiTotal").textContent = money(profile.totalEarnings||0);
-  document.getElementById("uKpiRating").textContent = (completed.length? "4.8":"—")+" / "+profile.responseRate+"%";
+  return `
 
-  const newBox = document.getElementById("ustaadNewJobs");
-  newBox.innerHTML = newReq.length ? newReq.map(j=>ustaadJobRequestHTML(j, profile)).join("") : `<p class="empty-note">Abhi koi naya job nahi hai — online rahein taake requests aayein.</p>`;
-  newBox.querySelectorAll("[data-simapply]").forEach(btn=> btn.addEventListener("click", ()=>{
-    toast("Apply ho gaya (demo)","Yeh feature customer-side applicant list mein already simulate ho chuka hai. Customer dashboard se poora flow dekhein.","default","ℹ️");
-  }));
+    <article
+      class="job-card"
+      data-job-id="${job.id}"
+    >
 
-  const activeBox = document.getElementById("ustaadActiveJobs");
-  activeBox.innerHTML = active.length ? active.map(j=>jobCardHTML(j,"ustaad")).join("") : `<p class="empty-note">Koi active job nahi.</p>`;
+      <div>
 
-  const histBox = document.getElementById("ustaadHistoryJobs");
-  histBox.innerHTML = completed.length ? completed.map(j=>jobCardHTML(j,"ustaad")).join("") : `<p class="empty-note">Abhi tak koi completed job nahi.</p>`;
+        <span class="badge">
+          ${escapeHTML(
+            statusMap[job.status] ||
+            job.status
+          )}
+        </span>
 
-  wireJobCardClicks("ustaad");
+        <h3 style="margin-top:10px;">
+          ${escapeHTML(job.title)}
+        </h3>
+
+        <p style="
+          color:#6d727c;
+          margin-top:7px;
+        ">
+          ${escapeHTML(job.description)}
+        </p>
+
+        <p style="
+          color:#6d727c;
+          margin-top:8px;
+          font-size:.85rem;
+        ">
+          📍 ${escapeHTML(job.location)}
+        </p>
+
+      </div>
+
+      <div style="
+        margin-top:15px;
+        display:flex;
+        justify-content:space-between;
+        gap:10px;
+        flex-wrap:wrap;
+      ">
+
+        <strong>
+          ${
+            job.budget
+              ? `Rs. ${Number(job.budget).toLocaleString()}`
+              : "Budget not specified"
+          }
+        </strong>
+
+        <span>
+          ${escapeHTML(job.category)}
+        </span>
+
+      </div>
+
+    </article>
+
+  `;
+
 }
 
-function isThisUstaadInvolved(job, profile){
-  // In this prototype, the logged-in ustaad "adopts" the identity of the selected applicant of matching skill so the flow is demoable end-to-end.
-  return job.selectedUstaadId && job.applicants.some(a=>a.ustaadId===job.selectedUstaadId && a.ustaad.skill===profile.skill);
+
+/* =========================================================
+   USTAAD DASHBOARD
+   ========================================================= */
+
+function renderUstaadDashboard(){
+
+  const newJobs =
+    state.jobs.filter(
+      job =>
+        job.status === "posted"
+    );
+
+  const activeJobs =
+    state.jobs.filter(
+      job =>
+        job.status === "active" ||
+        job.status === "accepted"
+    );
+
+  const completedJobs =
+    state.jobs.filter(
+      job =>
+        job.status === "completed"
+    );
+
+
+  const newElement =
+    $("#uKpiNew");
+
+  const activeElement =
+    $("#uKpiActive");
+
+  const completedElement =
+    $("#uKpiCompleted");
+
+  const monthlyElement =
+    $("#uKpiMonthly");
+
+  const totalElement =
+    $("#uKpiTotal");
+
+  const ratingElement =
+    $("#uKpiRating");
+
+
+  if(newElement){
+
+    newElement.textContent =
+      newJobs.length;
+
+  }
+
+
+  if(activeElement){
+
+    activeElement.textContent =
+      activeJobs.length;
+
+  }
+
+
+  if(completedElement){
+
+    completedElement.textContent =
+      completedJobs.length;
+
+  }
+
+
+  const total =
+    state.jobs.reduce(
+      (sum, job) =>
+        sum + Number(job.budget || 0),
+      0
+    );
+
+
+  if(totalElement){
+
+    totalElement.textContent =
+      `Rs. ${total.toLocaleString()}`;
+
+  }
+
+
+  if(monthlyElement){
+
+    monthlyElement.textContent =
+      `Rs. ${total.toLocaleString()}`;
+
+  }
+
+
+  if(ratingElement){
+
+    ratingElement.textContent =
+      state.jobs.length
+        ? "4.9 ⭐"
+        : "—";
+
+  }
+
+
+  renderUstaadJobs(
+    "#ustaadNewJobs",
+    newJobs,
+    true
+  );
+
+
+  renderUstaadJobs(
+    "#ustaadActiveJobs",
+    activeJobs,
+    false
+  );
+
+
+  renderUstaadJobs(
+    "#ustaadHistoryJobs",
+    completedJobs,
+    false
+  );
+
 }
 
-function ustaadJobRequestHTML(job, profile){
-  const cat = CATEGORIES.find(c=>c.id===job.category);
-  return `<div class="job-card">
-    <div class="job-card-left">
-      <h4>${cat?cat.icon+" "+cat.name:"Service"}</h4>
-      <p>${job.location} · ${job.description ? job.description.slice(0,50):""}</p>
-    </div>
-    <button class="btn btn-primary" data-simapply="${job.id}">apply karein</button>
-  </div>`;
+
+function renderUstaadJobs(
+  selector,
+  jobs,
+  allowAccept
+){
+
+  const container =
+    $(selector);
+
+  if(!container){
+    return;
+  }
+
+
+  if(!jobs.length){
+
+    container.innerHTML = `
+
+      <p class="empty-note">
+        Abhi koi job available nahi.
+      </p>
+
+    `;
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    jobs
+      .map(
+        job =>
+          renderUstaadJob(
+            job,
+            allowAccept
+          )
+      )
+      .join("");
+
 }
 
-function refreshAllDashboards(){
-  if(document.getElementById("view-customer-dashboard").classList.contains("active")) renderCustomerDashboard();
-  if(document.getElementById("view-ustaad-dashboard").classList.contains("active")) renderUstaadDashboard();
+
+function renderUstaadJob(
+  job,
+  allowAccept
+){
+
+  return `
+
+    <article
+      class="job-card"
+      data-ustaad-job="${job.id}"
+    >
+
+      <div>
+
+        <span class="badge badge-verified">
+          ${escapeHTML(job.category)}
+        </span>
+
+        <h3 style="margin-top:10px;">
+          ${escapeHTML(job.title)}
+        </h3>
+
+        <p style="
+          color:#6d727c;
+          margin-top:8px;
+        ">
+          ${escapeHTML(job.description)}
+        </p>
+
+        <p style="
+          color:#6d727c;
+          margin-top:8px;
+        ">
+          📍 ${escapeHTML(job.location)}
+        </p>
+
+      </div>
+
+      <div style="
+        margin-top:16px;
+        display:flex;
+        gap:10px;
+        align-items:center;
+        flex-wrap:wrap;
+      ">
+
+        <strong>
+          ${
+            job.budget
+              ? `Rs. ${Number(job.budget).toLocaleString()}`
+              : "Budget not specified"
+          }
+        </strong>
+
+        ${
+          allowAccept
+            ? `
+              <button
+                class="btn btn-primary"
+                data-accept-job="${job.id}"
+              >
+                Accept Job
+              </button>
+            `
+            : ""
+        }
+
+      </div>
+
+    </article>
+
+  `;
+
 }
 
-/* ==========================================================
-   AI ASSISTANT (rule based)
-   ========================================================== */
-const AI_RULES = [
-  {kw:["pipe","leak","tap","paani","plumbing","pani","nal","toilet","flush"],cat:"plumber",reply:"Yeh plumbing ka masla lagta hai — main aapko Plumber category recommend karta hoon."},
-  {kw:["ac","thanda","cooling","gas","split unit"],cat:"ac",reply:"AC cooling issue? AC Technician category behtar rahegi."},
-  {kw:["bijli","light","switch","wiring","short circuit","fuse","electric"],cat:"electrician",reply:"Yeh electrical masla hai — Electrician category select karein."},
-  {kw:["bike","car","gaari","engine","battery"],cat:"mechanic",reply:"Vehicle ka masla hai — Mechanic category try karein."},
-  {kw:["paint","rang","deewar"],cat:"painter",reply:"Painting ka kaam hai — Painter category select karein."},
-  {kw:["washing machine","fridge","freezer","microwave","appliance"],cat:"appliance",reply:"Yeh appliance repair ka case hai — Appliance Repair category behtar rahegi."},
+
+/* =========================================================
+   ACCEPT JOB
+   ========================================================= */
+
+function setupJobActions(){
+
+  document.addEventListener(
+    "click",
+    event => {
+
+      const button =
+        event.target.closest(
+          "[data-accept-job]"
+        );
+
+      if(!button){
+        return;
+      }
+
+
+      const id =
+        Number(
+          button.dataset.acceptJob
+        );
+
+
+      const job =
+        state.jobs.find(
+          item =>
+            item.id === id
+        );
+
+
+      if(!job){
+        return;
+      }
+
+
+      job.status =
+        "accepted";
+
+
+      saveState();
+
+      renderUstaadDashboard();
+
+      toast(
+        "Job accept ho gaya! 🔥"
+      );
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   ONLINE TOGGLE
+   ========================================================= */
+
+function setupOnlineToggle(){
+
+  const toggle =
+    $("#onlineToggle");
+
+  const label =
+    $("#onlineLabel");
+
+  if(!toggle){
+    return;
+  }
+
+
+  toggle.classList.add(
+    "active"
+  );
+
+
+  toggle.addEventListener(
+    "click",
+    () => {
+
+      state.online =
+        !state.online;
+
+
+      toggle.classList.toggle(
+        "active",
+        state.online
+      );
+
+
+      if(label){
+
+        label.textContent =
+          state.online
+            ? "online"
+            : "offline";
+
+      }
+
+
+      toast(
+        state.online
+          ? "Aap online hain 🟢"
+          : "Aap offline hain ⚪"
+      );
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   CATEGORY SYSTEM
+   ========================================================= */
+
+function setupCategories(){
+
+  $$(".cat-card").forEach(card => {
+
+    card.addEventListener(
+      "click",
+      () => {
+
+        const category =
+          card.dataset.category;
+
+        state.selectedCategory =
+          category;
+
+
+        const select =
+          $("#jobCategory");
+
+        if(select){
+
+          select.value =
+            category;
+
+        }
+
+
+        navigate(
+          "post-job"
+        );
+
+
+        setTimeout(() => {
+
+          const title =
+            $("#jobTitle");
+
+          if(title){
+
+            title.focus();
+
+          }
+
+        }, 300);
+
+      }
+    );
+
+  });
+
+}
+
+
+/* =========================================================
+   AI ASSISTANT
+   ========================================================= */
+
+const aiKnowledge = [
+
+  {
+    keys:[
+      "plumber",
+      "pipe",
+      "tap",
+      "water",
+      "leak"
+    ],
+
+    reply:
+      "Aap ko plumber ki zaroorat lag rahi hai. Main aap ke liye plumber category select kar deta hoon. 🔧"
+
+  },
+
+  {
+    keys:[
+      "electric",
+      "wiring",
+      "light",
+      "switch",
+      "fan"
+    ],
+
+    reply:
+      "Electrical problem ke liye verified electrician best rahega. ⚡"
+
+  },
+
+  {
+    keys:[
+      "ac",
+      "air conditioner",
+      "cooling",
+      "thanda"
+    ],
+
+    reply:
+      "AC problem ke liye AC Technician select karein. ❄️"
+
+  },
+
+  {
+    keys:[
+      "car",
+      "bike",
+      "engine",
+      "mechanic"
+    ],
+
+    reply:
+      "Vehicle problem ke liye mechanic category suitable hai. 🚗"
+
+  },
+
+  {
+    keys:[
+      "computer",
+      "laptop",
+      "pc",
+      "software"
+    ],
+
+    reply:
+      "Computer ya laptop ke liye Tech Expert category try karein. 💻"
+
+  }
+
 ];
 
-function aiRespond(text){
-  const lower = text.toLowerCase();
-  const match = AI_RULES.find(r=> r.kw.some(k=> lower.includes(k)));
-  if(match) return {reply: match.reply, cat: match.cat};
-  return {reply:"Mujhe pura yaqeen nahi, lekin aap 'i need a service' par ja kar sahi category khud bhi select kar sakte hain. Thodi aur detail den?", cat:null};
-}
 
-const aiFab = document.getElementById("aiFab");
-const aiPanel = document.getElementById("aiPanel");
-const aiMessages = document.getElementById("aiMessages");
-aiFab.addEventListener("click", ()=>{
-  aiPanel.classList.toggle("open");
-  if(aiPanel.classList.contains("open") && !aiMessages.dataset.greeted){
-    addAiMsg("bot","Assalam-o-Alaikum! Main Kaam Krwao AI hoon 🤖. Apna masla batayein, main sahi ustaad category suggest kar dunga — e.g. 'AC thanda nahi kar raha' ya 'tap se paani leak ho raha hai'.");
-    aiMessages.dataset.greeted="1";
+function setupAI(){
+
+  const fab =
+    $("#aiFab");
+
+  const panel =
+    $("#aiPanel");
+
+  const close =
+    $("#aiClose");
+
+  const input =
+    $("#aiInput");
+
+  const send =
+    $("#aiSend");
+
+
+  if(!fab || !panel){
+    return;
   }
-});
-document.getElementById("aiClose").addEventListener("click", ()=> aiPanel.classList.remove("open"));
 
-function addAiMsg(who, text){
-  const div = document.createElement("div");
-  div.className = "ai-msg "+(who==="bot"?"bot":"user");
-  div.textContent = text;
-  aiMessages.appendChild(div);
-  aiMessages.scrollTop = aiMessages.scrollHeight;
-}
 
-function aiSendHandler(){
-  const input = document.getElementById("aiInput");
-  const text = input.value.trim();
-  if(!text) return;
-  addAiMsg("user", text);
-  input.value="";
-  setTimeout(()=>{
-    const res = aiRespond(text);
-    addAiMsg("bot", res.reply);
-    if(res.cat){
-      const btnWrap = document.createElement("div");
-      btnWrap.style.alignSelf="flex-start";
-      const btn = document.createElement("button");
-      btn.className="btn btn-primary"; btn.style.fontSize=".78rem"; btn.style.padding="8px 14px";
-      btn.textContent="problem post karein →";
-      btn.addEventListener("click", ()=>{ preselectCategory=res.cat; showView("post-job"); aiPanel.classList.remove("open"); });
-      btnWrap.appendChild(btn);
-      aiMessages.appendChild(btnWrap);
-      aiMessages.scrollTop = aiMessages.scrollHeight;
+  fab.addEventListener(
+    "click",
+    () => {
+
+      state.aiOpen =
+        !state.aiOpen;
+
+      panel.classList.toggle(
+        "open",
+        state.aiOpen
+      );
+
+
+      if(state.aiOpen){
+
+        if(!$("#aiMessages").children.length){
+
+          addAIMessage(
+            "assistant",
+            "Assalam-o-alaikum! 👋 Main Kaam Krwao AI hoon. Apna masla batayein."
+          );
+
+        }
+
+        setTimeout(
+          () => input?.focus(),
+          150
+        );
+
+      }
+
     }
-  }, 650);
+  );
+
+
+  close?.addEventListener(
+    "click",
+    () => {
+
+      state.aiOpen = false;
+
+      panel.classList.remove(
+        "open"
+      );
+
+    }
+  );
+
+
+  send?.addEventListener(
+    "click",
+    sendAIMessage
+  );
+
+
+  input?.addEventListener(
+    "keydown",
+    event => {
+
+      if(event.key === "Enter"){
+
+        event.preventDefault();
+
+        sendAIMessage();
+
+      }
+
+    }
+  );
+
 }
-document.getElementById("aiSend").addEventListener("click", aiSendHandler);
-document.getElementById("aiInput").addEventListener("keydown",(e)=>{ if(e.key==="Enter") aiSendHandler(); });
 
-/* ==========================================================
-   NAVBAR SCROLL SHADOW + INIT
-   ========================================================== */
-window.addEventListener("scroll", ()=>{
-  document.getElementById("navbar").style.boxShadow = window.scrollY>10 ? "0 8px 30px -12px rgba(0,0,0,.5)" : "none";
-});
 
-/* boot */
-showView("home");
-toast("Welcome to Kaam Krwao 👋","Har kaam ka ustaad, aapke qareeb. Demo prototype explore karein.","default","🛠️");
+function addAIMessage(
+  role,
+  text
+){
 
-})();
+  const container =
+    $("#aiMessages");
+
+  if(!container){
+    return;
+  }
+
+
+  const message =
+    document.createElement("div");
+
+
+  message.className =
+    `ai-message ai-${role}`;
+
+
+  message.textContent =
+    text;
+
+
+  message.style.cssText = `
+
+    max-width:85%;
+    padding:11px 14px;
+    margin-bottom:10px;
+    border-radius:15px;
+    line-height:1.5;
+    font-size:.85rem;
+
+    ${
+      role === "user"
+        ? `
+          margin-left:auto;
+          color:white;
+          background:#ff6b00;
+        `
+        : `
+          color:#222;
+          background:#f0f1f3;
+        `
+    }
+
+  `;
+
+
+  container.appendChild(
+    message
+  );
+
+
+  container.scrollTop =
+    container.scrollHeight;
+
+}
+
+
+function sendAIMessage(){
+
+  const input =
+    $("#aiInput");
+
+  if(!input){
+    return;
+  }
+
+
+  const text =
+    input.value.trim();
+
+
+  if(!text){
+    return;
+  }
+
+
+  addAIMessage(
+    "user",
+    text
+  );
+
+
+  input.value = "";
+
+
+  setTimeout(
+    () => {
+
+      const answer =
+        getAIReply(text);
+
+      addAIMessage(
+        "assistant",
+        answer
+      );
+
+    },
+    500
+  );
+
+}
+
+
+function getAIReply(text){
+
+  const lower =
+    text.toLowerCase();
+
+
+  for(const item of aiKnowledge){
+
+    if(
+      item.keys.some(
+        key =>
+          lower.includes(key)
+      )
+    ){
+
+      return item.reply;
+
+    }
+
+  }
+
+
+  if(
+    lower.includes("hello") ||
+    lower.includes("hi") ||
+    lower.includes("salam")
+  ){
+
+    return "Wa Alaikum Assalam! 👋 Aap ko kis kaam ke liye Ustaad chahiye?";
+
+  }
+
+
+  if(
+    lower.includes("help") ||
+    lower.includes("madad")
+  ){
+
+    return "Bilkul! Apni problem simple words mein bata dein, main suitable service suggest karunga. 🤖";
+
+  }
+
+
+  return "Aap apni problem thori detail mein batayein. Main aap ko suitable Ustaad category suggest karne ki koshish karta hoon. 🔎";
+
+}
+
+
+/* =========================================================
+   3D THREE.JS ENGINE
+   ========================================================= */
+
+let three = {
+
+  scene:null,
+
+  camera:null,
+
+  renderer:null,
+
+  group:null,
+
+  objects:[],
+
+  clock:null,
+
+  initialized:false
+
+};
+
+
+/* =========================================================
+   THREE.JS INIT
+   ========================================================= */
+
+function initThree(){
+
+  const container =
+    $("#threeScene");
+
+
+  if(
+    !container ||
+    typeof THREE === "undefined"
+  ){
+
+    console.warn(
+      "Three.js unavailable."
+    );
+
+    hideThreeLoader();
+
+    return;
+
+  }
+
+
+  try{
+
+    three.scene =
+      new THREE.Scene();
+
+
+    three.clock =
+      new THREE.Clock();
+
+
+    three.camera =
+      new THREE.PerspectiveCamera(
+        45,
+        window.innerWidth /
+        window.innerHeight,
+        .1,
+        100
+      );
+
+
+    three.camera.position.set(
+      0,
+      0,
+      13
+    );
+
+
+    three.renderer =
+      new THREE.WebGLRenderer({
+
+        alpha:true,
+
+        antialias:true,
+
+        powerPreference:
+          "high-performance"
+
+      });
+
+
+    three.renderer.setPixelRatio(
+      Math.min(
+        window.devicePixelRatio || 1,
+        2
+      )
+    );
+
+
+    three.renderer.setSize(
+      window.innerWidth,
+      window.innerHeight
+    );
+
+
+    three.renderer.outputEncoding =
+      THREE.sRGBEncoding;
+
+
+    container.appendChild(
+      three.renderer.domElement
+    );
+
+
+    setupThreeLights();
+
+
+    three.group =
+      new THREE.Group();
+
+
+    three.scene.add(
+      three.group
+    );
+
+
+    createThreeObjects();
+
+
+    three.initialized =
+      true;
+
+
+    window.addEventListener(
+      "resize",
+      resizeThree
+    );
+
+
+    animateThree();
+
+
+    hideThreeLoader();
+
+  }catch(error){
+
+    console.error(
+      "3D initialization failed:",
+      error
+    );
+
+    hideThreeLoader();
+
+  }
+
+}
+
+
+/* =========================================================
+   THREE LIGHTS
+   ========================================================= */
+
+function setupThreeLights(){
+
+  const ambient =
+    new THREE.AmbientLight(
+      0xffffff,
+      2
+    );
+
+
+  three.scene.add(
+    ambient
+  );
+
+
+  const key =
+    new THREE.DirectionalLight(
+      0xffffff,
+      3
+    );
+
+
+  key.position.set(
+    5,
+    8,
+    10
+  );
+
+
+  three.scene.add(
+    key
+  );
+
+
+  const orange =
+    new THREE.PointLight(
+      0xff6b00,
+      5,
+      30
+    );
+
+
+  orange.position.set(
+    3,
+    2,
+    7
+  );
+
+
+  three.scene.add(
+    orange
+  );
+
+}
+
+
+/* =========================================================
+   MATERIAL HELPERS
+   ========================================================= */
+
+function orangeMaterial(){
+
+  return new THREE.MeshStandardMaterial({
+
+    color:0xff6b00,
+
+    metalness:.35,
+
+    roughness:.28
+
+  });
+
+}
+
+
+function whiteMaterial(){
+
+  return new THREE.MeshStandardMaterial({
+
+    color:0xf7f7f7,
+
+    metalness:.15,
+
+    roughness:.35
+
+  });
+
+}
+
+
+function darkMaterial(){
+
+  return new THREE.MeshStandardMaterial({
+
+    color:0x1d2024,
+
+    metalness:.55,
+
+    roughness:.25
+
+  });
+
+}
+
+
+/* =========================================================
+   3D TOOLBOX
+   ========================================================= */
+
+function createToolbox(){
+
+  const group =
+    new THREE.Group();
+
+
+  const body =
+    new THREE.Mesh(
+      new THREE.BoxGeometry(
+        2.2,
+        1.35,
+        1.2
+      ),
+      orangeMaterial()
+    );
+
+
+  body.position.y =
+    -.1;
+
+
+  group.add(
+    body
+  );
+
+
+  const top =
+    new THREE.Mesh(
+      new THREE.BoxGeometry(
+        1.85,
+        .18,
+        1.05
+      ),
+      whiteMaterial()
+    );
+
+
+  top.position.y =
+    .63;
+
+
+  group.add(
+    top
+  );
+
+
+  const handle =
+    new THREE.Mesh(
+      new THREE.TorusGeometry(
+        .55,
+        .09,
+        12,
+        32,
+        Math.PI
+      ),
+      darkMaterial()
+    );
+
+
+  handle.rotation.x =
+    Math.PI / 2;
+
+
+  handle.position.y =
+    .82;
+
+
+  group.add(
+    handle
+  );
+
+
+  group.position.set(
+    4,
+    1.8,
+    -1
+  );
+
+
+  group.rotation.set(
+    -.2,
+    .4,
+    -.12
+  );
+
+
+  group.scale.setScalar(
+    .9
+  );
+
+
+  three.group.add(
+    group
+  );
+
+
+  three.objects.push({
+
+    object:group,
+
+    speed:.45,
+
+    offset:0,
+
+    baseY:1.8
+
+  });
+
+}
+
+
+/* =========================================================
+   3D WRENCH
+   ========================================================= */
+
+function createWrench(){
+
+  const group =
+    new THREE.Group();
+
+
+  const handle =
+    new THREE.Mesh(
+      new THREE.BoxGeometry(
+        .35,
+        2.2,
+        .18
+      ),
+      darkMaterial()
+    );
+
+
+  handle.position.y =
+    -.5;
+
+
+  handle.rotation.z =
+    -.15;
+
+
+  group.add(
+    handle
+  );
+
+
+  const head =
+    new THREE.Mesh(
+      new THREE.TorusGeometry(
+        .48,
+        .14,
+        12,
+        32
+      ),
+      darkMaterial()
+    );
+
+
+  head.position.y =
+    .65;
+
+
+  group.add(
+    head
+  );
+
+
+  const center =
+    new THREE.Mesh(
+      new THREE.CylinderGeometry(
+        .27,
+        .27,
+        .25,
+        16
+      ),
+      orangeMaterial()
+    );
+
+
+  center.rotation.x =
+    Math.PI / 2;
+
+
+  center.position.y =
+    .65;
+
+
+  group.add(
+    center
+  );
+
+
+  group.position.set(
+    -4,
+    1.1,
+    -2
+  );
+
+
+  group.rotation.z =
+    -.4;
+
+
+  group.scale.setScalar(
+    .8
+  );
+
+
+  three.group.add(
+    group
+  );
+
+
+  three.objects.push({
+
+    object:group,
+
+    speed:.65,
+
+    offset:1.5,
+
+    baseY:1.1
+
+  });
+
+}
+
+
+/* =========================================================
+   3D HOUSE
+   ========================================================= */
+
+function createHouse(){
+
+  const group =
+    new THREE.Group();
+
+
+  const base =
+    new THREE.Mesh(
+      new THREE.BoxGeometry(
+        2.4,
+        1.8,
+        2
+      ),
+      whiteMaterial()
+    );
+
+
+  base.position.y =
+    -.3;
+
+
+  group.add(
+    base
+  );
+
+
+  const roof =
+    new THREE.Mesh(
+      new THREE.ConeGeometry(
+        1.8,
+        1.5,
+        4
+      ),
+      orangeMaterial()
+    );
+
+
+  roof.rotation.y =
+    Math.PI / 4;
+
+
+  roof.position.y =
+    1.35;
+
+
+  group.add(
+    roof
+  );
+
+
+  const door =
+    new THREE.Mesh(
+      new THREE.BoxGeometry(
+        .45,
+        .8,
+        .08
+      ),
+      darkMaterial()
+    );
+
+
+  door.position.set(
+    0,
+    -.75,
+    1.04
+  );
+
+
+  group.add(
+    door
+  );
+
+
+  group.position.set(
+    3.7,
+    -2.1,
+    -1
+  );
+
+
+  group.rotation.y =
+    -.35;
+
+
+  group.scale.setScalar(
+    .85
+  );
+
+
+  three.group.add(
+    group
+  );
+
+
+  three.objects.push({
+
+    object:group,
+
+    speed:.35,
+
+    offset:2,
+
+    baseY:-2.1
+
+  });
+
+}
+
+
+/* =========================================================
+   3D AI ORB
+   ========================================================= */
+
+function createAIOrb(){
+
+  const group =
+    new THREE.Group();
+
+
+  const sphere =
+    new THREE.Mesh(
+      new THREE.SphereGeometry(
+        1.05,
+        32,
+        32
+      ),
+      new THREE.MeshStandardMaterial({
+
+        color:0xff6b00,
+
+        emissive:0x7d2600,
+
+        emissiveIntensity:.35,
+
+        metalness:.5,
+
+        roughness:.18
+
+      })
+    );
+
+
+  group.add(
+    sphere
+  );
+
+
+  const ring =
+    new THREE.Mesh(
+      new THREE.TorusGeometry(
+        1.4,
+        .035,
+        10,
+        64
+      ),
+      new THREE.MeshBasicMaterial({
+
+        color:0xff6b00,
+
+        transparent:true,
+
+        opacity:.7
+
+      })
+    );
+
+
+  ring.rotation.x =
+    Math.PI / 2;
+
+
+  group.add(
+    ring
+  );
+
+
+  const ring2 =
+    ring.clone();
+
+
+  ring2.rotation.x =
+    Math.PI / 3;
+
+
+  ring2.rotation.y =
+    Math.PI / 4;
+
+
+  group.add(
+    ring2
+  );
+
+
+  group.position.set(
+    -3.5,
+    -2.2,
+    -2
+  );
+
+
+  three.group.add(
+    group
+  );
+
+
+  three.objects.push({
+
+    object:group,
+
+    speed:.8,
+
+    offset:.8,
+
+    baseY:-2.2,
+
+    orb:true
+
+  });
+
+}
+
+
+/* =========================================================
+   3D SERVICE VEHICLE
+   ========================================================= */
+
+function createVehicle(){
+
+  const group =
+    new THREE.Group();
+
+
+  const body =
+    new THREE.Mesh(
+      new THREE.BoxGeometry(
+        2.2,
+        .7,
+        1
+      ),
+      orangeMaterial()
+    );
+
+
+  group.add(
+    body
+  );
+
+
+  const cabin =
+    new THREE.Mesh(
+      new THREE.BoxGeometry(
+        1.15,
+        .55,
+        .9
+      ),
+      whiteMaterial()
+    );
+
+
+  cabin.position.set(
+    .25,
+    .55,
+    0
+  );
+
+
+  group.add(
+    cabin
+  );
+
+
+  const wheelGeometry =
+    new THREE.CylinderGeometry(
+      .3,
+      .3,
+      .2,
+      20
+    );
+
+
+  const wheelMaterial =
+    darkMaterial();
+
+
+  [-.7,.7].forEach(x => {
+
+    const wheel =
+      new THREE.Mesh(
+        wheelGeometry,
+        wheelMaterial
+      );
+
+
+    wheel.rotation.z =
+      Math.PI / 2;
+
+
+    wheel.position.set(
+      x,
+      -.5,
+      .55
+    );
+
+
+    group.add(
+      wheel
+    );
+
+
+    const wheel2 =
+      wheel.clone();
+
+
+    wheel2.position.z =
+      -.55;
+
+
+    group.add(
+      wheel2
+    );
+
+  });
+
+
+  group.position.set(
+    0,
+    -3.2,
+    -1
+  );
+
+
+  group.scale.setScalar(
+    .7
+  );
+
+
+  three.group.add(
+    group
+  );
+
+
+  three.objects.push({
+
+    object:group,
+
+    speed:.25,
+
+    offset:3,
+
+    baseY:-3.2
+
+  });
+
+}
+
+
+/* =========================================================
+   CREATE ALL OBJECTS
+   ========================================================= */
+
+function createThreeObjects(){
+
+  createToolbox();
+
+  createWrench();
+
+  createHouse();
+
+  createAIOrb();
+
+  createVehicle();
+
+}
+
+
+/* =========================================================
+   THREE ANIMATION
+   ========================================================= */
+
+function animateThree(){
+
+  if(!three.initialized){
+    return;
+  }
+
+
+  requestAnimationFrame(
+    animateThree
+  );
+
+
+  const time =
+    three.clock.getElapsedTime();
+
+
+  three.objects.forEach(
+    item => {
+
+      const object =
+        item.object;
+
+
+      object.rotation.y +=
+        0.0025 *
+        item.speed;
+
+
+      object.rotation.x +=
+        0.001 *
+        item.speed;
+
+
+      object.position.y =
+        item.baseY +
+        Math.sin(
+          time * item.speed +
+          item.offset
+        ) *
+        .18;
+
+
+      if(item.orb){
+
+        object.rotation.z =
+          time * .3;
+
+      }
+
+    }
+  );
+
+
+  three.group.rotation.y +=
+    (
+      state.mouseX * .08 -
+      three.group.rotation.y
+    ) * .01;
+
+
+  three.group.rotation.x +=
+    (
+      state.mouseY * .04 -
+      three.group.rotation.x
+    ) * .01;
+
+
+  three.renderer.render(
+    three.scene,
+    three.camera
+  );
+
+}
+
+
+/* =========================================================
+   RESIZE
+   ========================================================= */
+
+function resizeThree(){
+
+  if(
+    !three.camera ||
+    !three.renderer
+  ){
+    return;
+  }
+
+
+  three.camera.aspect =
+    window.innerWidth /
+    window.innerHeight;
+
+
+  three.camera.updateProjectionMatrix();
+
+
+  three.renderer.setSize(
+    window.innerWidth,
+    window.innerHeight
+  );
+
+}
+
+
+/* =========================================================
+   3D MOUSE INTERACTION
+   ========================================================= */
+
+function setup3DMouse(){
+
+  const hero =
+    $("#hero");
+
+
+  const panel =
+    $("#hero3DPanel");
+
+
+  document.addEventListener(
+    "mousemove",
+    event => {
+
+      state.mouseX =
+        (
+          event.clientX /
+          window.innerWidth
+        ) * 2 - 1;
+
+
+      state.mouseY =
+        -(
+          event.clientY /
+          window.innerHeight
+        ) * 2 + 1;
+
+
+      if(panel){
+
+        const rotateY =
+          state.mouseX * 7;
+
+        const rotateX =
+          state.mouseY * -7;
+
+
+        panel.style.transform = `
+
+          perspective(1000px)
+          rotateX(${rotateX}deg)
+          rotateY(${rotateY}deg)
+
+        `;
+
+      }
+
+    }
+  );
+
+
+  if(hero){
+
+    hero.addEventListener(
+      "mouseleave",
+      () => {
+
+        if(panel){
+
+          panel.style.transform =
+            "";
+
+        }
+
+      }
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   3D CARD TILT
+   ========================================================= */
+
+function setupCardTilt(){
+
+  const cards =
+    $$(".cat-card, .how-card, .ustaad-card, .dash-card, .job-card");
+
+
+  cards.forEach(card => {
+
+    card.addEventListener(
+      "mousemove",
+      event => {
+
+        if(
+          window.innerWidth < 700
+        ){
+          return;
+        }
+
+
+        const rect =
+          card.getBoundingClientRect();
+
+
+        const x =
+          event.clientX -
+          rect.left;
+
+
+        const y =
+          event.clientY -
+          rect.top;
+
+
+        const centerX =
+          rect.width / 2;
+
+
+        const centerY =
+          rect.height / 2;
+
+
+        const rotateY =
+          (
+            x - centerX
+          ) / centerX * 5;
+
+
+        const rotateX =
+          -(
+            y - centerY
+          ) / centerY * 5;
+
+
+        card.style.transform = `
+
+          perspective(900px)
+          rotateX(${rotateX}deg)
+          rotateY(${rotateY}deg)
+          translateY(-5px)
+
+        `;
+
+      }
+    );
+
+
+    card.addEventListener(
+      "mouseleave",
+      () => {
+
+        card.style.transform =
+          "";
+
+      }
+    );
+
+  });
+
+}
+
+
+/* =========================================================
+   CURSOR LIGHT
+   ========================================================= */
+
+function setupCursorLight(){
+
+  if(
+    window.matchMedia(
+      "(pointer: coarse)"
+    ).matches
+  ){
+    return;
+  }
+
+
+  const light =
+    document.createElement("div");
+
+
+  light.className =
+    "kk-cursor-light";
+
+
+  document.body.appendChild(
+    light
+  );
+
+
+  document.addEventListener(
+    "mousemove",
+    event => {
+
+      light.style.left =
+        `${event.clientX}px`;
+
+      light.style.top =
+        `${event.clientY}px`;
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   SCROLL REVEAL
+   ========================================================= */
+
+function setupReveal(){
+
+  const elements =
+    $$(".reveal");
+
+
+  if(
+    !("IntersectionObserver" in window)
+  ){
+
+    elements.forEach(
+      element =>
+        element.style.opacity = "1"
+    );
+
+    return;
+
+  }
+
+
+  const observer =
+    new IntersectionObserver(
+      entries => {
+
+        entries.forEach(
+          entry => {
+
+            if(
+              entry.isIntersecting
+            ){
+
+              entry.target.style.opacity =
+                "1";
+
+              observer.unobserve(
+                entry.target
+              );
+
+            }
+
+          }
+        );
+
+      },
+      {
+        threshold:.08
+      }
+    );
+
+
+  elements.forEach(
+    element =>
+      observer.observe(element)
+  );
+
+}
+
+
+/* =========================================================
+   HIDE 3D LOADER
+   ========================================================= */
+
+function hideThreeLoader(){
+
+  const loader =
+    $("#threeLoading");
+
+  if(!loader){
+    return;
+  }
+
+
+  setTimeout(
+    () => {
+
+      loader.classList.add(
+        "hidden"
+      );
+
+    },
+    350
+  );
+
+}
+
+
+/* =========================================================
+   REFRESH 3D
+   ========================================================= */
+
+function refresh3DScene(){
+
+  if(!three.initialized){
+    return;
+  }
+
+
+  three.objects.forEach(
+    item => {
+
+      item.object.visible =
+        true;
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   SMOOTH HEADER
+   ========================================================= */
+
+function setupNavbarScroll(){
+
+  const navbar =
+    $("#navbar");
+
+  if(!navbar){
+    return;
+  }
+
+
+  window.addEventListener(
+    "scroll",
+    () => {
+
+      if(window.scrollY > 20){
+
+        navbar.classList.add(
+          "scrolled"
+        );
+
+      }else{
+
+        navbar.classList.remove(
+          "scrolled"
+        );
+
+      }
+
+    },
+    {
+      passive:true
+    }
+  );
+
+}
+
+
+/* =========================================================
+   INITIALIZATION
+   ========================================================= */
+
+function init(){
+
+  loadState();
+
+  setupNavigation();
+
+  setupMobileMenu();
+
+  setupJobForm();
+
+  setupJobActions();
+
+  setupOnlineToggle();
+
+  setupCategories();
+
+  setupAI();
+
+  setup3DMouse();
+
+  setupCardTilt();
+
+  setupCursorLight();
+
+  setupReveal();
+
+  setupNavbarScroll();
+
+  renderCustomerDashboard();
+
+  renderUstaadDashboard();
+
+  initThree();
+
+}
+
+
+/* =========================================================
+   START APP
+   ========================================================= */
+
+if(
+  document.readyState === "loading"
+){
+
+  document.addEventListener(
+    "DOMContentLoaded",
+    init
+  );
+
+}else{
+
+  init();
+
+}
