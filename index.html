@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> faaahhh
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -6,7 +6,7 @@
 
 <title>Kaam Krwao — Har Kaam Ka Ustaad, Aapke Qareeb</title>
 
-<meta name="description" content="Kaam Krwao — Pakistan ka smart service marketplace. Find trusted Ustaads for every job.">
+<meta name="description" content="Kaam Krwao — Pakistan's smart service marketplace. Find trusted Ustaads for every job.">
 <meta name="theme-color" content="#ffffff">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -49,68 +49,25 @@
 
   <div class="nav-inner">
 
-    <div class="brand" data-nav="home">
-      <span class="brand-mark">
-        K<span class="dot">.</span>
-      </span>
-
-      <span class="brand-text">
-        kaam krwao
-      </span>
+    <div class="brand" data-nav="welcome">
+      <span class="brand-mark">K<span class="dot">.</span></span>
+      <span class="brand-text">Kaam Krwao</span>
     </div>
-
 
     <nav class="nav-links" id="navLinks">
-
-      <a href="#how" class="nav-link">
-        how it works
-      </a>
-
-      <a href="#categories" class="nav-link">
-        categories
-      </a>
-
-      <a href="#ustaads" class="nav-link">
-        ustaads
-      </a>
-
-      <a href="#" class="nav-link" data-nav="ustaad-landing">
-        become an ustaad
-      </a>
-
+      <a href="#how" class="nav-link">How It Works</a>
+      <a href="#categories" class="nav-link">Categories</a>
+      <a href="#ustaads" class="nav-link">Ustaads</a>
+      <a href="#" class="nav-link" id="navUstaadLink" data-nav="ustaad-landing">Become an Ustaad</a>
     </nav>
 
-
     <div class="nav-actions">
-
-      <button
-        class="btn btn-ghost"
-        id="btnCustomerDash"
-        data-nav="customer-dashboard"
-      >
-        my dashboard
-      </button>
-
-      <button
-        class="btn btn-primary"
-        id="btnPostJob"
-        data-nav="post-job"
-      >
-        i need a service
-      </button>
-
+      <button class="btn btn-ghost" id="btnCustomerDash" data-nav="customer-dashboard">My Dashboard</button>
+      <button class="btn btn-primary" id="btnPostJob" data-nav="post-job" type="button">I Need a Service</button>
     </div>
 
-
-    <button
-      class="nav-burger"
-      id="navBurger"
-      aria-label="menu"
-      aria-expanded="false"
-    >
-      <span></span>
-      <span></span>
-      <span></span>
+    <button class="nav-burger" id="navBurger" aria-label="menu" aria-expanded="false">
+      <span></span><span></span><span></span>
     </button>
 
   </div>
@@ -126,10 +83,62 @@
 
 
 <!-- =====================================================
+     WELCOME / GATE VIEW — first thing every visitor sees
+     ===================================================== -->
+
+<section class="view active" id="view-welcome">
+
+  <div class="welcome-shell">
+
+    <div class="welcome-bg">
+      <div class="orbit orbit-a"></div>
+      <div class="orbit orbit-b"></div>
+      <div class="grid-glow"></div>
+    </div>
+
+    <div class="welcome-inner reveal">
+
+      <span class="brand-mark welcome-mark">K<span class="dot">.</span></span>
+
+      <span class="eyebrow">welcome to</span>
+
+      <h1 class="welcome-title">
+        Kaam <span class="text-orange">Krwao</span>
+      </h1>
+
+      <p class="welcome-sub">
+        Pakistan's trusted service marketplace. Tell us what brings you here today.
+      </p>
+
+      <div class="welcome-choices">
+
+        <button class="welcome-card" data-nav="home" data-welcome-role="customer">
+          <span class="welcome-card-icon">🛠️</span>
+          <span class="welcome-card-title">I Need a Service</span>
+          <span class="welcome-card-desc">Post your job and get matched with verified, nearby Ustaads.</span>
+          <span class="welcome-card-arrow">Continue as a customer →</span>
+        </button>
+
+        <button class="welcome-card" id="welcomeVendorCard" data-nav="ustaad-landing" data-welcome-role="vendor">
+          <span class="welcome-card-icon" id="welcomeVendorIcon">👨‍🔧</span>
+          <span class="welcome-card-title" id="welcomeVendorTitle">Become a Vendor</span>
+          <span class="welcome-card-desc" id="welcomeVendorDesc">Register as an Ustaad, get verified, and start receiving jobs.</span>
+          <span class="welcome-card-arrow" id="welcomeVendorArrow">Continue as an Ustaad →</span>
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- =====================================================
      HOME VIEW
      ===================================================== -->
 
-<section class="view active" id="view-home">
+<section class="view" id="view-home">
 
 
   <!-- ================= HERO ================= -->
@@ -137,77 +146,44 @@
   <section class="hero" id="hero">
 
     <div class="hero-bg">
-
       <div class="orbit orbit-a"></div>
       <div class="orbit orbit-b"></div>
-
       <div class="grid-glow"></div>
-
     </div>
 
-
-    <!-- 3D Object Labels -->
-
-    <div class="three-label three-label-tool">
-      🔧 Ustaad
-    </div>
-
-    <div class="three-label three-label-home">
-      🏠 Home Service
-    </div>
-
-    <div class="three-label three-label-ai">
-      ✦ AI Assistant
-    </div>
-
+    <div class="three-label three-label-tool">🔧 Ustaad</div>
+    <div class="three-label three-label-home">🏠 Home Service</div>
+    <div class="three-label three-label-ai">✦ AI Assistant</div>
 
     <div class="hero-inner">
 
-
       <div class="hero-copy reveal">
 
-        <span class="eyebrow">
-          Karachi • Lahore • Islamabad aur baaki shehron mein
-        </span>
-
+        <span class="eyebrow">Karachi • Lahore • Islamabad and more cities</span>
 
         <h1>
-          Har kaam ka
-          <span class="text-orange">
-            ustaad
-          </span>,
+          Every job has an
+          <span class="text-orange">Ustaad</span>,
           <br>
-          aapke qareeb.
+          near you.
         </h1>
 
-
         <p class="hero-sub">
-          Apni problem batayein, verified Ustaads compare karein,
-          aur apne kaam ko asaani se complete karwayein.
+          Describe your problem, compare verified Ustaads, and get your job done with ease.
         </p>
-
 
         <div class="hero-cta">
 
-          <button
-            class="btn btn-primary btn-lg"
-            id="heroPostJob"
-            data-nav="post-job"
-          >
-            apna kaam batayein
+          <button class="btn btn-primary btn-lg" id="heroPostJob" data-nav="post-job" type="button">
+            Describe Your Job
             <span>→</span>
           </button>
 
-
-          <button
-            class="btn btn-ghost btn-lg"
-            data-nav="ustaad-landing"
-          >
-            main ustaad hoon
+          <button class="btn btn-ghost btn-lg" id="heroUstaadBtn" data-nav="ustaad-landing" type="button">
+            I Am an Ustaad
           </button>
 
         </div>
-
 
         <div class="hero-stats">
 
@@ -236,28 +212,16 @@
       <div class="hero-3d-panel" id="hero3DPanel">
 
         <div class="hero-3d-glow"></div>
-
         <div class="hero-3d-ring ring-one"></div>
         <div class="hero-3d-ring ring-two"></div>
 
         <div class="hero-3d-content">
-
-          <div class="hero-3d-icon">
-            🔧
-          </div>
-
-          <div class="hero-3d-title">
-            Find Your Ustaad
-          </div>
-
-          <div class="hero-3d-subtitle">
-            Fast • Verified • Nearby
-          </div>
-
+          <div class="hero-3d-icon">🔧</div>
+          <div class="hero-3d-title">Find Your Ustaad</div>
+          <div class="hero-3d-subtitle">Fast • Verified • Nearby</div>
         </div>
 
       </div>
-
 
     </div>
 
@@ -268,96 +232,36 @@
        HOW IT WORKS
        ================================================= -->
 
-  <section
-    class="section"
-    id="how"
-  >
+  <section class="section" id="how">
 
     <div class="section-head reveal">
-
-      <span class="eyebrow">
-        simple process
-      </span>
-
-      <h2>
-        Kaam karwana
-        <span class="text-orange">
-          itna mushkil nahi.
-        </span>
-      </h2>
-
-      <p>
-        Sirf teen simple steps mein apna kaam complete karwayein.
-      </p>
-
+      <span class="eyebrow">Simple Process</span>
+      <h2>Getting work done <span class="text-orange">isn't hard.</span></h2>
+      <p>Just three simple steps to get your job completed.</p>
     </div>
-
 
     <div class="how-grid">
 
-
       <div class="how-card reveal">
-
-        <div class="how-num">
-          01
-        </div>
-
-        <div class="how-icon">
-          📝
-        </div>
-
-        <h3>
-          Problem batayein
-        </h3>
-
-        <p>
-          Apne kaam ki details aur location share karein.
-        </p>
-
+        <div class="how-num">01</div>
+        <div class="how-icon">📝</div>
+        <h3>Describe The Problem</h3>
+        <p>Share your job details and location.</p>
       </div>
 
-
       <div class="how-card reveal">
-
-        <div class="how-num">
-          02
-        </div>
-
-        <div class="how-icon">
-          👨‍🔧
-        </div>
-
-        <h3>
-          Ustaad compare karein
-        </h3>
-
-        <p>
-          Rating, experience aur price dekh kar best Ustaad choose karein.
-        </p>
-
+        <div class="how-num">02</div>
+        <div class="how-icon">👨‍🔧</div>
+        <h3>Compare Ustaads</h3>
+        <p>Check rating, experience and price to choose the best Ustaad.</p>
       </div>
 
-
       <div class="how-card reveal">
-
-        <div class="how-num">
-          03
-        </div>
-
-        <div class="how-icon">
-          ✅
-        </div>
-
-        <h3>
-          Kaam complete karwayein
-        </h3>
-
-        <p>
-          Ustaad ko hire karein aur job ko track karein.
-        </p>
-
+        <div class="how-num">03</div>
+        <div class="how-icon">✅</div>
+        <h3>Get It Done</h3>
+        <p>Hire your Ustaad and track the job to completion.</p>
       </div>
-
 
     </div>
 
@@ -368,195 +272,45 @@
        CATEGORIES
        ================================================= -->
 
-  <section
-    class="section categories-section"
-    id="categories"
-  >
+  <section class="section categories-section" id="categories">
 
     <div class="section-head reveal">
-
-      <span class="eyebrow">
-        services
-      </span>
-
-      <h2>
-        Har kaam ke liye
-        <span class="text-orange">
-          expert.
-        </span>
-      </h2>
-
-      <p>
-        Apni requirement ke mutabiq service select karein.
-      </p>
-
+      <span class="eyebrow">Services</span>
+      <h2>An expert for <span class="text-orange">every job.</span></h2>
+      <p>Pick the service category that matches what you need.</p>
     </div>
 
+    <div class="cat-grid" id="categoryGrid">
 
-    <div
-      class="cat-grid"
-      id="categoryGrid"
-    >
-
-      <div
-        class="cat-card reveal"
-        data-category="plumber"
-      >
-
-        <div class="cat-icon">
-          🔧
-        </div>
-
-        <h3>
-          Plumber
-        </h3>
-
-        <p>
-          Pipes, taps aur water systems
-        </p>
-
+      <div class="cat-card reveal" data-category="plumber">
+        <div class="cat-icon">🔧</div>
+        <h3>Plumber</h3>
+        <p>Pipes, taps and water systems</p>
       </div>
 
-
-      <div
-        class="cat-card reveal"
-        data-category="electrician"
-      >
-
-        <div class="cat-icon">
-          ⚡
-        </div>
-
-        <h3>
-          Electrician
-        </h3>
-
-        <p>
-          Wiring, switches aur electrical work
-        </p>
-
+      <div class="cat-card reveal" data-category="electrician">
+        <div class="cat-icon">⚡</div>
+        <h3>Electrician</h3>
+        <p>Wiring, switches and electrical work</p>
       </div>
 
-
-      <div
-        class="cat-card reveal"
-        data-category="ac"
-      >
-
-        <div class="cat-icon">
-          ❄️
-        </div>
-
-        <h3>
-          AC Technician
-        </h3>
-
-        <p>
-          AC repair, service aur installation
-        </p>
-
+      <div class="cat-card reveal" data-category="carpenter">
+        <div class="cat-icon">🪚</div>
+        <h3>Carpenter</h3>
+        <p>Furniture and wood work</p>
       </div>
 
-
-      <div
-        class="cat-card reveal"
-        data-category="carpenter"
-      >
-
-        <div class="cat-icon">
-          🪚
-        </div>
-
-        <h3>
-          Carpenter
-        </h3>
-
-        <p>
-          Furniture aur wood work
-        </p>
-
+      <div class="cat-card reveal" data-category="painter">
+        <div class="cat-icon">🎨</div>
+        <h3>Painter</h3>
+        <p>Home and office painting</p>
       </div>
 
-
-      <div
-        class="cat-card reveal"
-        data-category="painter"
-      >
-
-        <div class="cat-icon">
-          🎨
-        </div>
-
-        <h3>
-          Painter
-        </h3>
-
-        <p>
-          Home aur office painting
-        </p>
-
+      <div class="cat-card reveal" data-category="technician">
+        <div class="cat-icon">💻</div>
+        <h3>Tech Expert</h3>
+        <p>Computer and technology services</p>
       </div>
-
-
-      <div
-        class="cat-card reveal"
-        data-category="mechanic"
-      >
-
-        <div class="cat-icon">
-          🚗
-        </div>
-
-        <h3>
-          Mechanic
-        </h3>
-
-        <p>
-          Car aur bike repair
-        </p>
-
-      </div>
-
-
-      <div
-        class="cat-card reveal"
-        data-category="cleaner"
-      >
-
-        <div class="cat-icon">
-          🧹
-        </div>
-
-        <h3>
-          Cleaner
-        </h3>
-
-        <p>
-          Home aur office cleaning
-        </p>
-
-      </div>
-
-
-      <div
-        class="cat-card reveal"
-        data-category="technician"
-      >
-
-        <div class="cat-icon">
-          💻
-        </div>
-
-        <h3>
-          Tech Expert
-        </h3>
-
-        <p>
-          Computer aur technology services
-        </p>
-
-      </div>
-
 
     </div>
 
@@ -567,122 +321,45 @@
        FEATURED USTAADS
        ================================================= -->
 
-  <section
-    class="section"
-    id="ustaads"
-  >
+  <section class="section" id="ustaads">
 
     <div class="section-head reveal">
-
-      <span class="eyebrow">
-        trusted professionals
-      </span>
-
-      <h2>
-        Featured
-        <span class="text-orange">
-          Ustaads
-        </span>
-      </h2>
-
-      <p>
-        Verified professionals jo quality work provide karte hain.
-      </p>
-
+      <span class="eyebrow">Trusted Professionals</span>
+      <h2>Featured <span class="text-orange">Ustaads</span></h2>
+      <p>Verified professionals who deliver quality work.</p>
     </div>
 
-
-    <div
-      class="ustaad-grid"
-      id="featuredUstaads"
-    >
+    <div class="ustaad-grid" id="featuredUstaads">
 
       <div class="ustaad-card reveal">
-
-        <div class="ustaad-avatar">
-          👨‍🔧
-        </div>
-
+        <div class="ustaad-avatar">👨‍🔧</div>
         <div class="ustaad-info">
-
-          <h3>
-            Muhammad Ali
-          </h3>
-
-          <span class="badge badge-verified">
-            ✓ verified
-          </span>
-
-          <p>
-            Master Plumber
-          </p>
-
-          <div class="ustaad-rating">
-            ⭐ 4.9
-          </div>
-
+          <h3>Muhammad Ali</h3>
+          <span class="badge badge-verified">✓ Verified</span>
+          <p>Master Plumber</p>
+          <div class="ustaad-rating">⭐ 4.9</div>
         </div>
-
       </div>
-
 
       <div class="ustaad-card reveal">
-
-        <div class="ustaad-avatar">
-          👨‍🔧
-        </div>
-
+        <div class="ustaad-avatar">👨‍🔧</div>
         <div class="ustaad-info">
-
-          <h3>
-            Ahmed Khan
-          </h3>
-
-          <span class="badge badge-verified">
-            ✓ verified
-          </span>
-
-          <p>
-            Electrician
-          </p>
-
-          <div class="ustaad-rating">
-            ⭐ 4.8
-          </div>
-
+          <h3>Ahmed Khan</h3>
+          <span class="badge badge-verified">✓ Verified</span>
+          <p>Electrician</p>
+          <div class="ustaad-rating">⭐ 4.8</div>
         </div>
-
       </div>
-
 
       <div class="ustaad-card reveal">
-
-        <div class="ustaad-avatar">
-          👨‍🔧
-        </div>
-
+        <div class="ustaad-avatar">👨‍🔧</div>
         <div class="ustaad-info">
-
-          <h3>
-            Usman Raza
-          </h3>
-
-          <span class="badge badge-verified">
-            ✓ verified
-          </span>
-
-          <p>
-            AC Technician
-          </p>
-
-          <div class="ustaad-rating">
-            ⭐ 4.9
-          </div>
-
+          <h3>Usman Raza</h3>
+          <span class="badge badge-verified">✓ Verified</span>
+          <p>Carpenter</p>
+          <div class="ustaad-rating">⭐ 4.9</div>
         </div>
-
       </div>
-
 
     </div>
 
@@ -696,33 +373,12 @@
   <section class="section">
 
     <div class="cta-banner reveal">
-
       <div class="cta-banner-inner">
-
-        <span class="eyebrow">
-          need help?
-        </span>
-
-        <h2>
-          Aaj hi apna kaam
-          <span class="text-orange">
-            karwao.
-          </span>
-        </h2>
-
-        <p>
-          Apni problem share karein aur trusted Ustaad find karein.
-        </p>
-
-        <button
-          class="btn btn-primary btn-lg"
-          data-nav="post-job"
-        >
-          Start Now →
-        </button>
-
+        <span class="eyebrow">Need Help?</span>
+        <h2>Get your job done <span class="text-orange">today.</span></h2>
+        <p>Share your problem and find a trusted Ustaad.</p>
+        <button class="btn btn-primary btn-lg" data-nav="post-job" type="button">Start Now →</button>
       </div>
-
     </div>
 
   </section>
@@ -734,203 +390,71 @@
      POST JOB VIEW
      ===================================================== -->
 
-<section
-  class="view"
-  id="view-post-job"
->
+<section class="view" id="view-post-job">
 
   <div class="page-shell">
 
     <div class="page-head">
-
-      <button
-        class="back-btn"
-        data-nav="home"
-      >
-        ← Back
-      </button>
-
-      <span class="eyebrow">
-        customer portal
-      </span>
-
-      <h1>
-        Apna
-        <span class="text-orange">
-          kaam batayein
-        </span>
-      </h1>
-
-      <p>
-        Details share karein taake relevant Ustaads aapko proposals bhej sakein.
-      </p>
-
+      <button class="back-btn" data-nav="home" type="button">← Back</button>
+      <span class="eyebrow">Customer Portal</span>
+      <h1>Describe <span class="text-orange">Your Job</span></h1>
+      <p>Share the details so relevant Ustaads can send you proposals.</p>
     </div>
-
 
     <div class="form-card">
 
       <form id="postJobForm">
 
         <div class="field">
-
-          <label for="jobTitle">
-            Kaam ka title
-          </label>
-
-          <input
-            id="jobTitle"
-            name="jobTitle"
-            type="text"
-            placeholder="e.g. AC repair karwani hai"
-            required
-          >
-
+          <label for="jobTitle">Job Title</label>
+          <input id="jobTitle" name="jobTitle" type="text" placeholder="e.g. AC needs repair" required>
         </div>
 
-
         <div class="field">
-
-          <label for="jobCategory">
-            Category
-          </label>
-
-          <select
-            id="jobCategory"
-            name="jobCategory"
-            required
-          >
-
-            <option value="">
-              Select category
-            </option>
-
-            <option value="plumber">
-              Plumber
-            </option>
-
-            <option value="electrician">
-              Electrician
-            </option>
-
-            <option value="ac">
-              AC Technician
-            </option>
-
-            <option value="carpenter">
-              Carpenter
-            </option>
-
-            <option value="painter">
-              Painter
-            </option>
-
-            <option value="mechanic">
-              Mechanic
-            </option>
-
-            <option value="cleaner">
-              Cleaner
-            </option>
-
-            <option value="technician">
-              Tech Expert
-            </option>
-
+          <label for="jobCategory">Category</label>
+          <select id="jobCategory" name="jobCategory" required>
+            <option value="">Select category</option>
+            <option value="plumber">Plumber</option>
+            <option value="electrician">Electrician</option>
+            <option value="carpenter">Carpenter</option>
+            <option value="painter">Painter</option>
+            <option value="technician">Tech Expert</option>
           </select>
-
         </div>
-
 
         <div class="field">
-
-          <label for="jobDescription">
-            Problem ki details
-          </label>
-
-          <textarea
-            id="jobDescription"
-            name="jobDescription"
-            rows="5"
-            placeholder="Apna masla detail mein likhein..."
-            required
-          ></textarea>
-
+          <label for="jobDescription">Problem Details</label>
+          <textarea id="jobDescription" name="jobDescription" rows="5" placeholder="Describe your problem in detail..." required></textarea>
         </div>
-
 
         <div class="field">
-
-          <label for="jobLocation">
-            Location
-          </label>
-
-          <input
-            id="jobLocation"
-            name="jobLocation"
-            type="text"
-            placeholder="e.g. Gulshan-e-Iqbal, Karachi"
-            required
-          >
-
+          <label for="jobLocation">Location</label>
+          <input id="jobLocation" name="jobLocation" type="text" placeholder="e.g. Gulshan-e-Iqbal, Karachi" required>
         </div>
 
-
-        <div class="form-row">
-
-          <div class="field">
-
-            <label for="jobBudget">
-              Budget
-            </label>
-
-            <input
-              id="jobBudget"
-              name="jobBudget"
-              type="number"
-              min="0"
-              placeholder="Rs."
-            >
-
-          </div>
-
-
-          <div class="field">
-
-            <label for="jobUrgency">
-              Urgency
-            </label>
-
-            <select
-              id="jobUrgency"
-              name="jobUrgency"
-            >
-
-              <option value="normal">
-                Normal
-              </option>
-
-              <option value="urgent">
-                Urgent
-              </option>
-
-              <option value="emergency">
-                Emergency
-              </option>
-
-            </select>
-
-          </div>
-
+        <div class="field">
+          <label for="jobUrgency">Urgency</label>
+          <select id="jobUrgency" name="jobUrgency">
+            
+            <option value="normal">Normal</option>
+            <option value="urgent">Urgent</option>
+            <option value="emergency">Emergency</option>
+          </select>
         </div>
 
+        <div class="field">
+          <label>Job Photos (kam se kam 1 zaroori)</label>
+          <input type="file" accept="image/*" id="jobPhotos" multiple>
+          <div class="upload-preview" id="jobPhotosPreview"></div>
+        </div>
 
-        <button
-          type="submit"
-          class="btn btn-primary btn-lg"
-        >
-          Post Job →
-        </button>
+        <div class="field">
+          <label>Job Video (kam se kam 1 zaroori)</label>
+          <input type="file" accept="video/*" id="jobVideos" multiple>
+          <div class="upload-preview" id="jobVideosPreview"></div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg">Post Job →</button>
 
       </form>
 
@@ -945,145 +469,54 @@
      CUSTOMER DASHBOARD
      ===================================================== -->
 
-<section
-  class="view"
-  id="view-customer-dashboard"
->
+<section class="view" id="view-customer-dashboard">
 
   <div class="page-shell">
 
     <div class="dash-head">
-
       <div>
-
-        <span class="eyebrow">
-          customer portal
-        </span>
-
-        <h1>
-          My
-          <span class="text-orange">
-            Dashboard
-          </span>
-        </h1>
-
+        <span class="eyebrow">Customer Portal</span>
+        <h1>My <span class="text-orange">Dashboard</span></h1>
       </div>
-
-      <button
-        class="btn btn-primary"
-        data-nav="post-job"
-      >
-        + New Job
-      </button>
-
+      <button class="btn btn-primary" data-nav="post-job" type="button">+ New Job</button>
     </div>
-
 
     <div class="dash-grid four">
 
       <div class="dash-card kpi reveal">
-
-        <span
-          class="kpi-num"
-          id="cKpiActive"
-        >
-          0
-        </span>
-
-        <span>
-          active requests
-        </span>
-
+        <span class="kpi-num" id="cKpiActive">0</span>
+        <span>Active Requests</span>
       </div>
 
-
       <div class="dash-card kpi reveal">
-
-        <span
-          class="kpi-num"
-          id="cKpiChosen"
-        >
-          0
-        </span>
-
-        <span>
-          chosen Ustaads
-        </span>
-
+        <span class="kpi-num" id="cKpiChosen">0</span>
+        <span>Chosen Ustaads</span>
       </div>
 
-
       <div class="dash-card kpi reveal">
-
-        <span
-          class="kpi-num"
-          id="cKpiCompleted"
-        >
-          0
-        </span>
-
-        <span>
-          completed jobs
-        </span>
-
+        <span class="kpi-num" id="cKpiCompleted">0</span>
+        <span>Completed Jobs</span>
       </div>
 
-
       <div class="dash-card kpi reveal">
-
-        <span
-          class="kpi-num"
-          id="cKpiReviews"
-        >
-          0
-        </span>
-
-        <span>
-          reviews
-        </span>
-
+        <span class="kpi-num" id="cKpiReviews">0</span>
+        <span>Reviews</span>
       </div>
 
     </div>
 
-
     <div class="dash-section">
-
-      <h3>
-        My Jobs
-      </h3>
-
-      <div
-        class="job-list"
-        id="customerJobs"
-      >
-
-        <p class="empty-note">
-          Abhi koi job post nahi ki.
-        </p>
-
+      <h3>My Jobs</h3>
+      <div class="job-list" id="customerJobs">
+        <p class="empty-note">You haven't posted a job yet.</p>
       </div>
-
     </div>
 
-
     <div class="dash-section">
-
-      <h3>
-        Tracking
-      </h3>
-
-      <div
-        class="tracker-wrap"
-        id="customerTracker"
-      >
-
-        <div class="empty-note">
-          Jab aap job book karein ge to tracking yahan show hogi.
-        </div>
-
+      <h3>Tracking</h3>
+      <div class="tracker-wrap" id="customerTracker">
+        <div class="empty-note">Once you book a job, tracking will show up here.</div>
       </div>
-
     </div>
 
   </div>
@@ -1095,98 +528,163 @@
      USTAAD LANDING
      ===================================================== -->
 
-<section
-  class="view"
-  id="view-ustaad-landing"
->
+<section class="view" id="view-ustaad-landing">
 
   <div class="page-shell">
 
     <div class="page-head">
-
-      <span class="eyebrow">
-        become a professional
-      </span>
-
-      <h1>
-        Aap bhi
-        <span class="text-orange">
-          Ustaad
-        </span>
-        banein.
-      </h1>
-
-      <p>
-        Apni skill ko customers tak pohanchayein aur jobs hasil karein.
-      </p>
-
+      <span class="eyebrow">Become a Professional</span>
+      <h1>Become an <span class="text-orange">Ustaad</span></h1>
+      <p>Bring your skills to customers near you and start earning.</p>
     </div>
-
 
     <div class="dash-grid three">
 
       <div class="how-card reveal">
-
-        <div class="how-icon">
-          👤
-        </div>
-
-        <h3>
-          Profile banayein
-        </h3>
-
-        <p>
-          Apni skills aur experience add karein.
-        </p>
-
+        <div class="how-icon">👤</div>
+        <h3>Create Your Profile</h3>
+        <p>Add your skills and experience.</p>
       </div>
 
-
       <div class="how-card reveal">
-
-        <div class="how-icon">
-          📋
-        </div>
-
-        <h3>
-          Jobs receive karein
-        </h3>
-
-        <p>
-          Apne area ke customers ki requests dekhein.
-        </p>
-
+        <div class="how-icon">📋</div>
+        <h3>Receive Jobs</h3>
+        <p>See job requests from customers in your area.</p>
       </div>
 
-
       <div class="how-card reveal">
-
-        <div class="how-icon">
-          💰
-        </div>
-
-        <h3>
-          Earn karein
-        </h3>
-
-        <p>
-          Quality work karein aur earning increase karein.
-        </p>
-
+        <div class="how-icon">💰</div>
+        <h3>Start Earning</h3>
+        <p>Do quality work and grow your earnings.</p>
       </div>
 
     </div>
 
-
-    <button
-      class="btn btn-primary btn-lg"
-      data-nav="ustaad-dashboard"
-    >
-      Ustaad Portal Open Karein →
+    <button class="btn btn-primary btn-lg" id="ustaadPortalBtn" type="button">
+      Open Ustaad Portal →
     </button>
 
   </div>
 
+</section>
+
+<section class="view" id="view-ustaad-apply">
+  <div class="page-shell">
+    <button class="back-link" data-nav="ustaad-landing" type="button">← Go Back</button>
+    <div class="page-head reveal">
+      <h1>Ustaad <span class="text-orange">Registration</span></h1>
+      <p>Fill in all fields correctly — our verification team reviews within 24-48 hours (this demo approves instantly).</p>
+    </div>
+
+    <div class="stepper" id="ustaadStepper">
+      <div class="step active" data-step="1"><span>1</span>Basic Info</div>
+      <div class="step" data-step="2"><span>2</span>Skills</div>
+      <div class="step" data-step="3"><span>3</span>Documents</div>
+      <div class="step" data-step="4"><span>4</span>Review</div>
+    </div>
+
+    <form id="ustaadForm" class="card form-card">
+      <div class="form-step active" data-step="1">
+        <h3>Basic Information</h3>
+        <div class="field-row">
+          <label class="field"><span>Full Name</span><input type="text" id="uFullName" placeholder="e.g. Muhammad Irfan"></label>
+          <label class="field"><span>Phone Number</span><input type="tel" id="uPhone" placeholder="03XX-XXXXXXX"></label>
+        </div>
+        <div class="field-row">
+          <label class="field"><span>CNIC Number</span><input type="text" id="uCnic" placeholder="XXXXX-XXXXXXX-X"></label>
+          <label class="field"><span>Years of Experience</span><input type="number" id="uExp" min="0" placeholder="e.g. 6"></label>
+        </div>
+        <div class="field-row">
+          <label class="field"><span>City</span>
+            <select id="uCity"><option>Karachi</option><option>Lahore</option><option>Islamabad</option><option>Rawalpindi</option><option>Faisalabad</option></select>
+          </label>
+          <label class="field"><span>Operating Areas (comma separated)</span><input type="text" id="uAreas" placeholder="e.g. DHA, Clifton, Gulshan"></label>
+        </div>
+      </div>
+
+      <div class="form-step" data-step="2">
+        <h3>Choose Your Skill(s)</h3>
+        <div class="cat-select-grid" id="uSkillGrid"></div>
+        <label class="field">
+          <span>Visiting Fee (Rs.)</span>
+          <input type="number" id="uVisitingFee" placeholder="e.g. 300" min="0">
+        </label>
+       <label class="field">
+          <span>Service Guarantee</span>
+          <select id="uGuarantee">
+            <option>7 days</option><option>30 days</option><option>3 months</option><option>1 year</option>
+          </select>
+        </label>
+
+        <div class="guarantee-policy-note">
+          <strong>⚠️ Guarantee Policy / Zaroori Hidayat</strong>
+          <p>
+            During your guarantee period, if the customer's problem happens again because of your work, you must fix it again <strong>free of cost</strong>.
+            <br><em>Guarantee days ke doran agar customer ka wahi masla dobara ho, to aapko wo kaam <strong>free of cost</strong> dobara karna hoga.</em>
+          </p>
+          <p>
+            If you do not respond to the customer during this period, your account may be <strong>temporarily or permanently banned/suspended</strong>.
+            <br><em>Agar is doran aap customer ko response nahi dete, to aapka account <strong>temporary ya permanently ban/suspend</strong> kar diya jayega.</em>
+          </p>
+        </div>
+      </div>
+
+      <div class="form-step" data-step="3">
+        <h3>Documents (Demo Upload)</h3>
+        <div class="field-row">
+          <label class="field"><span>Profile Photo</span><input type="file" accept="image/*" id="uPhoto"><div class="upload-preview" id="uPhotoPreview"></div></label>
+          <label class="field"><span>CNIC Front</span><input type="file" accept="image/*" id="uCnicFront"><div class="upload-preview" id="uCnicFrontPreview"></div></label>
+        </div>
+        <div class="field-row">
+          <label class="field"><span>CNIC Back</span><input type="file" accept="image/*" id="uCnicBack"><div class="upload-preview" id="uCnicBackPreview"></div></label>
+          <label class="field"><span>Police Verification / Character Certificate</span><input type="file" accept="image/*,.pdf" id="uPolice"><div class="upload-preview" id="uPolicePreview"></div></label>
+        </div>
+      </div>
+
+      <div class="field-row">
+          <label class="field"><span>Portfolio Photos (Optional)</span><input type="file" accept="image/*" id="uPortfolioPhotos" multiple><div class="upload-preview" id="uPortfolioPhotosPreview"></div></label>
+          <label class="field"><span>Portfolio Video (Optional)</span><input type="file" accept="video/*" id="uPortfolioVideo" multiple><div class="upload-preview" id="uPortfolioVideoPreview"></div></label>
+        </div>
+
+      <div class="form-step" data-step="4">
+        <h3>Review Your Details</h3>
+        <div class="review-box" id="ustaadReviewBox"></div>
+      </div>
+
+      <div class="form-nav">
+        <button type="button" class="btn btn-ghost" id="uPrev">Back</button>
+        <button type="button" class="btn btn-primary" id="uNext">Next <span class="arrow">→</span></button>
+        <button type="submit" class="btn btn-primary hidden" id="uSubmit">Submit Application</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<!-- ================= USTAAD VERIFICATION STATUS ================= -->
+<section class="view" id="view-ustaad-verification">
+  <div class="page-shell narrow">
+    <div class="verify-card card reveal" id="verifyCard"></div>
+  </div>
+</section>
+
+<!-- ================= USTAAD MEMBERSHIP PAYMENT ================= -->
+<section class="view" id="view-ustaad-membership">
+  <div class="page-shell narrow">
+    <div class="card membership-card reveal">
+      <span class="eyebrow">Last Step</span>
+      <h2>Activate Your Monthly Membership</h2>
+      <div class="membership-price"><span>Rs. 2,500</span>/month</div>
+      <p>Once your membership is active, your profile becomes visible to customers and you can apply to jobs.</p>
+      <div class="pay-methods" id="payMethods">
+        <button class="pay-method active" data-method="easypaisa" type="button"><span class="pay-fallback">EP</span><span>EasyPaisa</span></button>
+        <button class="pay-method" data-method="jazzcash" type="button"><span class="pay-fallback">JC</span><span>JazzCash</span></button>
+        <button class="pay-method" data-method="bank" type="button"><span class="pay-fallback">🏦</span><span>Bank Transfer</span></button>
+      </div>
+      <div class="pay-form" id="payForm"></div>
+      <button class="btn btn-primary btn-lg full" id="payNowBtn" type="button">Pay Rs. 2,500</button>
+      <p class="pay-note">This is a demo payment simulation — no real transaction will occur.</p>
+    </div>
+  </div>
 </section>
 
 
@@ -1194,218 +692,92 @@
      USTAAD DASHBOARD
      ===================================================== -->
 
-<section
-  class="view"
-  id="view-ustaad-dashboard"
->
+<section class="view" id="view-ustaad-dashboard">
 
   <div class="page-shell">
 
     <div class="dash-head">
-
+ 
+  <div>
+    <span class="eyebrow">Ustaad Portal</span>
+    <h1>Ustaad <span class="text-orange">Dashboard</span></h1>
+ 
+    <!-- Profile mini card showing form data -->
+    <div class="ustaad-profile-mini">
+      <div class="ustaad-profile-avatar">👨‍🔧</div>
       <div>
-
-        <span class="eyebrow">
-          ustaad portal
-        </span>
-
-        <h1>
-          Ustaad
-          <span class="text-orange">
-            Dashboard
-          </span>
-        </h1>
-
-        <span
-          id="ustaadBadge"
-          class="badge badge-verified"
-        >
-          verified
-        </span>
-
+        <strong id="ustaadDashName">—</strong>
+        <span id="ustaadDashSkills" class="profile-skills"></span>
+        <span id="ustaadDashCity" class="profile-city"></span>
+        <span id="ustaadDashExp" class="profile-exp"></span>
       </div>
-
-
-      <div class="status-toggle">
-
-        <span>
-          Status:
-        </span>
-
-        <button
-          class="toggle-switch"
-          id="onlineToggle"
-          type="button"
-        >
-          <span class="knob"></span>
-        </button>
-
-        <span id="onlineLabel">
-          online
-        </span>
-
-      </div>
+      <span id="ustaadBadge" class="badge badge-verified">✓ Verified</span>
+    </div>
+  </div>
+ 
+  <div class="status-toggle">
+    <span>Status:</span>
+    <button class="toggle-switch" id="onlineToggle" type="button">
+      <span class="knob"></span>
+    </button>
+    <span id="onlineLabel">Online</span>
+  </div>
 
     </div>
-
 
     <div class="dash-grid six">
 
       <div class="dash-card kpi reveal">
-
-        <span
-          class="kpi-num"
-          id="uKpiNew"
-        >
-          0
-        </span>
-
-        <span>
-          new requests
-        </span>
-
+        <span class="kpi-num" id="uKpiNew">0</span>
+        <span>New Requests</span>
       </div>
 
-
       <div class="dash-card kpi reveal">
-
-        <span
-          class="kpi-num"
-          id="uKpiActive"
-        >
-          0
-        </span>
-
-        <span>
-          active jobs
-        </span>
-
+        <span class="kpi-num" id="uKpiActive">0</span>
+        <span>Active Jobs</span>
       </div>
 
-
       <div class="dash-card kpi reveal">
-
-        <span
-          class="kpi-num"
-          id="uKpiCompleted"
-        >
-          0
-        </span>
-
-        <span>
-          completed jobs
-        </span>
-
+        <span class="kpi-num" id="uKpiCompleted">0</span>
+        <span>Completed Jobs</span>
       </div>
 
-
       <div class="dash-card kpi reveal">
-
-        <span
-          class="kpi-num"
-          id="uKpiMonthly"
-        >
-          Rs. 0
-        </span>
-
-        <span>
-          monthly earnings
-        </span>
-
+        <span class="kpi-num" id="uKpiMonthly">Rs. 0</span>
+        <span>Monthly Earnings</span>
       </div>
 
-
       <div class="dash-card kpi reveal">
-
-        <span
-          class="kpi-num"
-          id="uKpiTotal"
-        >
-          Rs. 0
-        </span>
-
-        <span>
-          total recorded
-        </span>
-
+        <span class="kpi-num" id="uKpiTotal">Rs. 0</span>
+        <span>Total Recorded</span>
       </div>
 
-
       <div class="dash-card kpi reveal">
-
-        <span
-          class="kpi-num"
-          id="uKpiRating"
-        >
-          —
-        </span>
-
-        <span>
-          rating / response
-        </span>
-
+        <span class="kpi-num" id="uKpiRating">—</span>
+        <span>Rating / Response</span>
       </div>
 
     </div>
 
-
     <div class="dash-section">
-
-      <h3>
-        Naye job requests
-      </h3>
-
-      <div
-        class="job-list"
-        id="ustaadNewJobs"
-      >
-
-        <p class="empty-note">
-          Abhi koi naya job nahi hai — online rahein taake requests aayein.
-        </p>
-
+      <h3>New Job Requests</h3>
+      <div class="job-list" id="ustaadNewJobs">
+        <p class="empty-note">No new jobs yet — stay online to receive requests.</p>
       </div>
-
     </div>
 
-
     <div class="dash-section">
-
-      <h3>
-        Active jobs
-      </h3>
-
-      <div
-        class="job-list"
-        id="ustaadActiveJobs"
-      >
-
-        <p class="empty-note">
-          Koi active job nahi.
-        </p>
-
+      <h3>Active Jobs</h3>
+      <div class="job-list" id="ustaadActiveJobs">
+        <p class="empty-note">No active jobs.</p>
       </div>
-
     </div>
 
-
     <div class="dash-section">
-
-      <h3>
-        Completed jobs
-      </h3>
-
-      <div
-        class="job-list"
-        id="ustaadHistoryJobs"
-      >
-
-        <p class="empty-note">
-          Abhi tak koi completed job nahi.
-        </p>
-
+      <h3>Completed Jobs</h3>
+      <div class="job-list" id="ustaadHistoryJobs">
+        <p class="empty-note">No completed jobs yet.</p>
       </div>
-
     </div>
 
   </div>
@@ -1420,16 +792,8 @@
      MODAL ROOT
      ===================================================== -->
 
-<div
-  class="modal-overlay"
-  id="modalOverlay"
->
-
-  <div
-    class="modal-box"
-    id="modalBox"
-  ></div>
-
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box" id="modalBox"></div>
 </div>
 
 
@@ -1437,69 +801,25 @@
      AI ASSISTANT
      ===================================================== -->
 
-<div
-  class="ai-assistant"
-  id="aiAssistant"
->
+<div class="ai-assistant" id="aiAssistant">
 
-  <button
-    class="ai-fab"
-    id="aiFab"
-    aria-label="Open Kaam Krwao AI"
-  >
-
-    <span class="ai-fab-icon">
-      🤖
-    </span>
-
+  <button class="ai-fab" id="aiFab" aria-label="Open Kaam Krwao AI">
+    <span class="ai-fab-icon">🤖</span>
     <span class="ai-fab-pulse"></span>
-
   </button>
 
-
-  <div
-    class="ai-panel"
-    id="aiPanel"
-  >
+  <div class="ai-panel" id="aiPanel">
 
     <div class="ai-panel-head">
-
-      <span>
-        kaam krwao ai 🤖
-      </span>
-
-      <button
-        id="aiClose"
-        aria-label="Close AI"
-      >
-        ✕
-      </button>
-
+      <span>Kaam Krwao AI 🤖</span>
+      <button id="aiClose" aria-label="Close AI" type="button">✕</button>
     </div>
 
-
-    <div
-      class="ai-messages"
-      id="aiMessages"
-    ></div>
-
+    <div class="ai-messages" id="aiMessages"></div>
 
     <div class="ai-input-row">
-
-      <input
-        type="text"
-        id="aiInput"
-        placeholder="apna masla likhein... e.g. 'AC thanda nahi kar raha'"
-        autocomplete="off"
-      >
-
-      <button
-        id="aiSend"
-        aria-label="Send"
-      >
-        ➤
-      </button>
-
+      <input type="text" id="aiInput" placeholder="Describe your problem... e.g. 'AC not cooling'" autocomplete="off">
+      <button id="aiSend" aria-label="Send" type="button">➤</button>
     </div>
 
   </div>
@@ -1512,13 +832,7 @@
      app.js will use these elements
      ===================================================== -->
 
-<div
-  id="threeObjectData"
-  hidden
-  data-object-theme="orange-white"
-  data-object-style="premium"
->
-</div>
+<div id="threeObjectData" hidden data-object-theme="orange-white" data-object-style="premium"></div>
 
 
 <!-- =====================================================
@@ -1529,4 +843,3 @@
 
 </body>
 </html>
-```
