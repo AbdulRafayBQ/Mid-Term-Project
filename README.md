@@ -19,7 +19,7 @@ The core idea, concept, problem-solving approach, and overall product direction 
 ---
 
 ## ✨ Main Features
-
+- 🤖 **AI-Powered Assistant** — Helps users understand their requirements and find suitable services (Using JS).
 - 📝 **Job Posting** — Customers can post their service requirements.
 - 👤 **Ustaad Profiles** — Professionals can showcase their skills and experience.
 - ✅ **Ustaad Verification** — Verification flow for service professionals.
@@ -40,10 +40,8 @@ The core idea, concept, problem-solving approach, and overall product direction 
 - HTML5
 - CSS3
 - JavaScript
-- Three.js
 - Google Fonts
 - LocalStorage
-- FileReader API
 - Vercel
 
 ---
