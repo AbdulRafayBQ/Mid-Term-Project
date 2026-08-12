@@ -55,10 +55,12 @@
     </div>
 
     <nav class="nav-links" id="navLinks">
-      <a href="#how" class="nav-link">How It Works</a>
-      <a href="#categories" class="nav-link">Categories</a>
-      <a href="#ustaads" class="nav-link">Ustaads</a>
+      <a href="#how" class="nav-link" data-anchor="how">How It Works</a>
+      <a href="#categories" class="nav-link" data-anchor="categories">Categories</a>
+      <a href="#ustaads" class="nav-link" data-anchor="ustaads">Ustaads</a>
       <a href="#" class="nav-link" id="navUstaadLink" data-nav="ustaad-landing">Become an Ustaad</a>
+      <a href="#" class="nav-link nav-link-mobile-only" data-nav="customer-dashboard">My Dashboard</a>
+      <a href="#" class="nav-link nav-link-mobile-only" data-nav="post-job">I Need a Service</a>
     </nav>
 
     <div class="nav-actions">
@@ -639,12 +641,11 @@
           <label class="field"><span>CNIC Back</span><input type="file" accept="image/*" id="uCnicBack"><div class="upload-preview" id="uCnicBackPreview"></div></label>
           <label class="field"><span>Police Verification / Character Certificate</span><input type="file" accept="image/*,.pdf" id="uPolice"><div class="upload-preview" id="uPolicePreview"></div></label>
         </div>
-      </div>
-
-      <div class="field-row">
+        <div class="field-row">
           <label class="field"><span>Portfolio Photos (Optional)</span><input type="file" accept="image/*" id="uPortfolioPhotos" multiple><div class="upload-preview" id="uPortfolioPhotosPreview"></div></label>
           <label class="field"><span>Portfolio Video (Optional)</span><input type="file" accept="video/*" id="uPortfolioVideo" multiple><div class="upload-preview" id="uPortfolioVideoPreview"></div></label>
         </div>
+      </div>
 
       <div class="form-step" data-step="4">
         <h3>Review Your Details</h3>
@@ -760,6 +761,13 @@
     </div>
 
     <div class="dash-section">
+      <h3>My Reviews</h3>
+      <div class="job-list" id="ustaadReviewsList">
+        <p class="empty-note">No reviews yet.</p>
+      </div>
+    </div>
+
+    <div class="dash-section">
       <h3>New Job Requests</h3>
       <div class="job-list" id="ustaadNewJobs">
         <p class="empty-note">No new jobs yet — stay online to receive requests.</p>
@@ -794,6 +802,14 @@
 
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal-box" id="modalBox"></div>
+</div>
+
+<!-- =====================================================
+     MEDIA VIEWER (photo / video full preview)
+     ===================================================== -->
+<div class="media-viewer-overlay" id="mediaViewerOverlay">
+  <button class="media-viewer-close" id="mediaViewerClose" aria-label="Close">✕</button>
+  <div class="media-viewer-inner" id="mediaViewerInner"></div>
 </div>
 
 

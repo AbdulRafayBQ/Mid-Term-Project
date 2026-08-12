@@ -14,7 +14,9 @@ const state = {
   mouseY: 0,
   ustaad: null,
   ustaadStep: 1,
-  ustaadPayMethod: "easypaisa"
+  ustaadPayMethod: "easypaisa",
+  reviews: {},          // ustaadKey -> [ {name, stars, text, date} ]
+  lowPower: false
 };
 
 const SERVICE_CATEGORIES = [
@@ -35,6 +37,110 @@ const MOCK_USTAADS = {
 
 function mockNamesFor(category){
   return MOCK_USTAADS[category] || MOCK_USTAADS.technician;
+}
+
+/* =========================================================
+   FAKE LOCAL REVIEW SYSTEM (stars)
+   ========================================================= */
+
+const FAKE_REVIEWERS = ["Ayesha K.", "Bilal S.", "Hina R.", "Farhan M.", "Sana T.", "Usama Q.", "Mehak A.", "Talha N."];
+const FAKE_REVIEW_LINES = [
+  "Bohat acha kaam kiya, time pe pohnch gaye.",
+  "Price bhi fair tha aur kaam bhi neat tha.",
+  "Thora late aaye lekin kaam professional tha.",
+  "Highly recommend, dubara zaroor bulaunga.",
+  "Masla bilkul theek ho gaya, shukriya!",
+  "Behtareen service, polite aur experienced.",
+  "Kaam sahi tha magar thora expensive laga.",
+  "Ustaad ne guarantee ke mutabiq dobara bhi thk kia."
+];
+
+function seedRandom(seed){
+  let value = seed % 2147483647;
+  if(value <= 0) value += 2147483646;
+  return () => (value = (value * 16807) % 2147483647) / 2147483647;
+}
+
+function hashString(str){
+  let hash = 0;
+  for(let i = 0; i < str.length; i++){ hash = (hash * 31 + str.charCodeAt(i)) >>> 0; }
+  return hash || 1;
+}
+
+/** Returns a stable, deterministic set of fake reviews for a given ustaad name (same name => same reviews every time). */
+function getReviewsFor(ustaadName){
+  const key = String(ustaadName || "ustaad").toLowerCase();
+  if(state.reviews[key]) return state.reviews[key];
+
+  const rand = seedRandom(hashString(key));
+  const count = 2 + Math.floor(rand() * 3); // 2-4 fake reviews
+  const reviews = [];
+  const usedNames = new Set();
+  for(let i = 0; i < count; i++){
+    let reviewer = FAKE_REVIEWERS[Math.floor(rand() * FAKE_REVIEWERS.length)];
+    let tries = 0;
+    while(usedNames.has(reviewer) && tries < 5){ reviewer = FAKE_REVIEWERS[Math.floor(rand() * FAKE_REVIEWERS.length)]; tries++; }
+    usedNames.add(reviewer);
+    const stars = 4 + (rand() > .75 ? 0 : 1); // mostly 4-5 stars
+    reviews.push({
+      name: reviewer,
+      stars: Math.min(5, stars),
+      text: FAKE_REVIEW_LINES[Math.floor(rand() * FAKE_REVIEW_LINES.length)],
+      fake: true
+    });
+  }
+  state.reviews[key] = reviews;
+  return reviews;
+}
+
+function addUserReview(ustaadName, stars, text){
+  const key = String(ustaadName || "ustaad").toLowerCase();
+  const list = getReviewsFor(ustaadName); // ensure fake seed reviews exist first
+  list.unshift({ name: state.ustaadReviewerName || "You", stars, text: text || "", fake:false });
+  state.reviews[key] = list;
+  saveState();
+}
+
+function averageRating(ustaadName){
+  const list = getReviewsFor(ustaadName);
+  if(!list.length) return 0;
+  return list.reduce((sum, r) => sum + r.stars, 0) / list.length;
+}
+
+function starsHTML(score, size = ""){
+  const rounded = Math.round(score);
+  let out = `<span class="star-rating ${size}">`;
+  for(let i = 1; i <= 5; i++){
+    out += i <= rounded ? "★" : `<span class="star-empty">★</span>`;
+  }
+  out += "</span>";
+  return out;
+}
+
+function renderReviewSummaryHTML(ustaadName){
+  const list = getReviewsFor(ustaadName);
+  const avg = averageRating(ustaadName);
+  return `
+    <div class="review-summary">
+      ${starsHTML(avg)}
+      <span class="review-summary-score">${avg.toFixed(1)}</span>
+      <span class="review-summary-count">(${list.length} review${list.length === 1 ? "" : "s"})</span>
+    </div>
+  `;
+}
+
+function renderReviewListHTML(ustaadName){
+  const list = getReviewsFor(ustaadName);
+  if(!list.length) return `<p class="empty-note">No reviews yet.</p>`;
+  return list.map(review => `
+    <div class="review-card">
+      <div class="review-card-head">
+        <span class="review-card-name">${escapeHTML(review.name)}</span>
+        ${starsHTML(review.stars)}
+      </div>
+      <p class="review-card-text">${escapeHTML(review.text)}</p>
+    </div>
+  `).join("");
 }
 
 /* =========================================================
@@ -60,6 +166,47 @@ function setupModal(){
   if(!overlay) return;
   overlay.addEventListener("click", event => {
     if(event.target === overlay) closeModal();
+  });
+}
+
+/* =========================================================
+   MEDIA VIEWER (click a job/portfolio photo or video to preview it big, with playback)
+   ========================================================= */
+
+function openMediaViewer(url, type){
+  const overlay = $("#mediaViewerOverlay");
+  const inner = $("#mediaViewerInner");
+  if(!overlay || !inner) return;
+  inner.innerHTML = type === "video"
+    ? `<video src="${url}" controls autoplay playsinline></video>`
+    : `<img src="${url}" alt="Preview">`;
+  overlay.classList.add("open");
+}
+
+function closeMediaViewer(){
+  const overlay = $("#mediaViewerOverlay");
+  const inner = $("#mediaViewerInner");
+  if(!overlay) return;
+  overlay.classList.remove("open");
+  if(inner) inner.innerHTML = ""; // stop any playing video
+}
+
+function setupMediaViewer(){
+  const overlay = $("#mediaViewerOverlay");
+  const closeBtn = $("#mediaViewerClose");
+  if(!overlay) return;
+  closeBtn?.addEventListener("click", closeMediaViewer);
+  overlay.addEventListener("click", event => { if(event.target === overlay) closeMediaViewer(); });
+
+  // Event delegation: any .media-thumb (job photos/videos, portfolio) opens the viewer
+  document.addEventListener("click", event => {
+    const thumb = event.target.closest(".media-thumb");
+    if(!thumb) return;
+    const media = thumb.querySelector("img, video");
+    if(!media) return;
+    const url = media.getAttribute("src");
+    const type = media.tagName.toLowerCase() === "video" ? "video" : "photo";
+    if(url) openMediaViewer(url, type);
   });
 }
 
@@ -129,8 +276,11 @@ function openChatPopup(name, phone){
     catch{ return []; }
   })();
 
+  // derive initials for avatar
+  const initials = name.split(" ").slice(0,2).map(w=>w[0]||"").join("").toUpperCase() || "U";
+
   function renderMessages(msgs){
-    if(!msgs.length) return `<div class="chat-empty">Say salam! 👋</div>`;
+    if(!msgs.length) return `<div class="chat-empty">Send a message to get started 👋</div>`;
     return msgs.map(m => `
       <div class="chat-bubble ${m.from === "me" ? "chat-out" : "chat-in"}">
         <span>${escapeHTML(m.text)}</span>
@@ -142,26 +292,61 @@ function openChatPopup(name, phone){
   const html = `
     <div class="chat-popup-wrap">
       <div class="chat-popup-head">
-        <div class="chat-avatar">👨‍🔧</div>
+        <div class="chat-avatar-initials">${escapeHTML(initials)}</div>
         <div class="chat-head-info">
           <strong>${escapeHTML(name)}</strong>
           <span class="chat-online-dot">● Online</span>
         </div>
-        <button class="chat-close-btn" onclick="closeModal()">✕</button>
+        <div class="chat-head-actions">
+          <button class="chat-head-icon-btn" title="Call"
+            data-call-name="${escapeHTML(name)}" data-call-phone="${escapeHTML(phone)}">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07
+                A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.63A2 2 0 012
+                0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0
+                01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0
+                012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+            </svg>
+          </button>
+          <button class="chat-close-btn" onclick="closeModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
       </div>
+
       <div class="chat-messages" id="chatMessages">${renderMessages(savedMessages)}</div>
+
       <div class="chat-input-row">
-        <button class="chat-attach" title="Attach">📎</button>
-        <input type="text" id="chatMsgInput" placeholder="Type a message..." autocomplete="off">
-        <button class="chat-send-btn" id="chatSendBtn">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        <button class="chat-attach" title="Attach photo">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+        </button>
+        <input type="text" id="chatMsgInput"
+          placeholder="Type a message..." autocomplete="off">
+        <button class="chat-send-btn" id="chatSendBtn" aria-label="Send">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
         </button>
       </div>
     </div>
   `;
   openModal(html);
 
-  // scroll to bottom
   setTimeout(() => {
     const msgs = $("#chatMessages");
     if(msgs) msgs.scrollTop = msgs.scrollHeight;
@@ -174,7 +359,8 @@ function openChatPopup(name, phone){
     const text = input?.value.trim();
     if(!text) return;
     const now = new Date();
-    const time = now.getHours().toString().padStart(2,"0") + ":" + now.getMinutes().toString().padStart(2,"0");
+    const time = now.getHours().toString().padStart(2,"0") + ":" +
+                 now.getMinutes().toString().padStart(2,"0");
     savedMessages.push({ from:"me", text, time });
     try{ localStorage.setItem(convId, JSON.stringify(savedMessages)); }catch{}
     const msgs = $("#chatMessages");
@@ -187,7 +373,6 @@ function openChatPopup(name, phone){
     }
     input.value = "";
 
-    // mock reply
     setTimeout(() => {
       const replies = [
         "Ji bilkul, main aa jata hun! 👍",
@@ -197,7 +382,8 @@ function openChatPopup(name, phone){
         "Main kal subah 10 baje aa sakta hun."
       ];
       const reply = replies[Math.floor(Math.random() * replies.length)];
-      const rtime = new Date().getHours().toString().padStart(2,"0") + ":" + new Date().getMinutes().toString().padStart(2,"0");
+      const rtime = new Date().getHours().toString().padStart(2,"0") + ":" +
+                    new Date().getMinutes().toString().padStart(2,"0");
       savedMessages.push({ from:"them", text:reply, time:rtime });
       try{ localStorage.setItem(convId, JSON.stringify(savedMessages)); }catch{}
       const msgs2 = $("#chatMessages");
@@ -208,11 +394,13 @@ function openChatPopup(name, phone){
         msgs2.appendChild(bubble2);
         msgs2.scrollTop = msgs2.scrollHeight;
       }
-    }, 1000 + Math.random() * 1000);
+    }, 900 + Math.random() * 800);
   }
 
   sendBtn?.addEventListener("click", sendMsg);
-  input?.addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); sendMsg(); } });
+  input?.addEventListener("keydown", e => {
+    if(e.key === "Enter"){ e.preventDefault(); sendMsg(); }
+  });
   setTimeout(() => input?.focus(), 100);
 }
 
@@ -236,8 +424,8 @@ function renderMediaThumbs(mediaList = [], kind = "photo"){
   if(!mediaList.length) return "";
   return mediaList.map(item =>
     kind === "video"
-      ? `<div class="media-thumb"><video src="${item.url}" muted></video></div>`
-      : `<div class="media-thumb"><img src="${item.url}" alt="${escapeHTML(item.name)}"></div>`
+      ? `<div class="media-thumb" title="Click to play"><video src="${item.url}" muted></video></div>`
+      : `<div class="media-thumb" title="Click to view"><img src="${item.url}" alt="${escapeHTML(item.name)}"></div>`
   ).join("");
 }
 
@@ -262,6 +450,7 @@ function saveState(){
   try{
     localStorage.setItem("kaamKrwaoJobs", JSON.stringify(state.jobs));
     localStorage.setItem("kaamKrwaoUstaad", JSON.stringify(state.ustaad));
+    localStorage.setItem("kaamKrwaoReviews", JSON.stringify(state.reviews));
   }catch(error){ console.warn("Could not save app data:", error); }
 }
 
@@ -271,6 +460,8 @@ function loadState(){
     if(saved){ const parsed = JSON.parse(saved); if(Array.isArray(parsed)) state.jobs = parsed; }
     const savedUstaad = localStorage.getItem("kaamKrwaoUstaad");
     if(savedUstaad){ const parsedUstaad = JSON.parse(savedUstaad); if(parsedUstaad && typeof parsedUstaad === "object") state.ustaad = parsedUstaad; }
+    const savedReviews = localStorage.getItem("kaamKrwaoReviews");
+    if(savedReviews){ const parsedReviews = JSON.parse(savedReviews); if(parsedReviews && typeof parsedReviews === "object") state.reviews = parsedReviews; }
   }catch(error){ console.warn("Could not load app data:", error); }
 }
 
@@ -278,12 +469,14 @@ function resetAppData(){
   try{
     localStorage.removeItem("kaamKrwaoJobs");
     localStorage.removeItem("kaamKrwaoUstaad");
+    localStorage.removeItem("kaamKrwaoReviews");
     Object.keys(localStorage).forEach(key => {
       if(key.startsWith("chat_")) localStorage.removeItem(key);
     });
   }catch(error){ console.warn("Could not reset app data:", error); }
   state.jobs = [];
   state.ustaad = null;
+  state.reviews = {};
 }
 /* =========================================================
    TOAST
@@ -329,6 +522,27 @@ function navigate(viewName){
   refresh3DScene();
 }
 
+/* Navigate to the home page, then smooth-scroll to a section on it.
+   This fixes navbar links (How It Works / Categories / Ustaads) so they
+   work from ANY page, not just when already on the home page. */
+function navigateAndScroll(anchorId){
+  const goToAnchor = () => {
+    const section = $(`#${anchorId}`);
+    if(!section) return;
+    const offset = section.getBoundingClientRect().top + window.scrollY - 80;
+    window.scrollTo({ top:offset, behavior:"smooth" });
+  };
+
+  if(state.currentView !== "home"){
+    navigate("home");
+    // wait a tick for the view to become visible/laid out before measuring offset
+    setTimeout(goToAnchor, 60);
+  }else{
+    goToAnchor();
+  }
+  closeMobileMenu();
+}
+
 /* =========================================================
    USTAAD PORTAL ROUTING
    ========================================================= */
@@ -353,16 +567,12 @@ function setupNavigation(){
     });
   });
 
-  $$(".nav-link[href^='#']").forEach(link => {
+  // Anchor links (How It Works / Categories / Ustaads) now work from any page:
+  // they navigate to Home first (if needed) and then scroll to the section.
+  $$(".nav-link[data-anchor]").forEach(link => {
     link.addEventListener("click", event => {
-      const target = link.getAttribute("href");
-      if(!target) return;
-      const section = $(target);
-      if(section){
-        event.preventDefault();
-        const offset = section.getBoundingClientRect().top + window.scrollY - 80;
-        window.scrollTo({ top:offset, behavior:"smooth" });
-      }
+      event.preventDefault();
+      navigateAndScroll(link.dataset.anchor);
     });
   });
 }
@@ -489,7 +699,6 @@ function showFindingUstaadModal(job){
 }
 
 function generateMockQuotes(job, names){
-  const ratings = ["4.6","4.7","4.8","4.9","5.0"];
   const experiences = [2,3,4,5,6,8];
   names.forEach((name, index) => {
     const useFixedQuote = index !== names.length - 1;
@@ -501,7 +710,7 @@ function generateMockQuotes(job, names){
       ustaadName:name,
       ustaadCity: job.location?.split(",").pop()?.trim() || "Karachi",
       ustaadExp: experiences[Math.floor(Math.random()*experiences.length)],
-      ustaadRating: ratings[Math.floor(Math.random()*ratings.length)],
+      ustaadRating: averageRating(name).toFixed(1),
       ustaadSkill: job.category,
       portfolio: [],
       type: useFixedQuote ? "fixed" : "after",
@@ -557,6 +766,41 @@ function renderCustomerJob(job){
   const assignedQuote = job.quotes?.find(q => q.id === job.assignedQuoteId);
   const pendingQuotes = (job.quotes || []).filter(q => q.status === "pending");
 
+  // The job's own details (title/description/media) are kept separate from
+  // the list of Ustaad offers/quotes below, which now sits in its own
+  // clearly-labelled "Ustaad Offers" section instead of being mixed in.
+  let offersHTML = "";
+  if(assignedQuote){
+    offersHTML = `
+      <div class="job-offers-section">
+        <div class="job-offers-heading">✅ Assigned Ustaad</div>
+        <div class="contact-reveal">
+          <span>✅ <strong>${escapeHTML(assignedQuote.ustaadName)}</strong> is assigned to this job.</span>
+          ${renderReviewSummaryHTML(assignedQuote.ustaadName)}
+          <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
+            <button class="btn btn-primary" data-call-name="${escapeHTML(assignedQuote.ustaadName)}" data-call-phone="${escapeHTML(assignedQuote.phone || "0300-0000000")}" type="button">📞 Call</button>
+            <button class="btn btn-ghost" data-chat-name="${escapeHTML(assignedQuote.ustaadName)}" data-chat-phone="${escapeHTML(assignedQuote.phone || "0300-0000000")}" type="button">💬 Message</button>
+            ${job.status === "completed" ? `<button class="btn btn-ghost" data-leave-review="${escapeHTML(assignedQuote.ustaadName)}" type="button">⭐ Leave a Review</button>` : ""}
+          </div>
+        </div>
+      </div>
+    `;
+  }else if(pendingQuotes.length){
+    offersHTML = `
+      <div class="job-offers-section">
+        <div class="job-offers-heading">👨‍🔧 Ustaad Offers (${pendingQuotes.length})</div>
+        <div class="quotes-block">${pendingQuotes.map(q => renderQuoteCard(job, q)).join("")}</div>
+      </div>
+    `;
+  }else{
+    offersHTML = `
+      <div class="job-offers-section">
+        <div class="job-offers-heading">👨‍🔧 Ustaad Offers</div>
+        <p class="empty-note" style="padding:0;">Waiting for Ustaads to respond with a quote...</p>
+      </div>
+    `;
+  }
+
   return `
     <article class="job-card" data-job-id="${job.id}">
       <div>
@@ -573,21 +817,7 @@ function renderCustomerJob(job){
         <strong>${job.budget ? `Rs. ${Number(job.budget).toLocaleString()}` : "Budget not specified"}</strong>
         <span>${escapeHTML(job.category)}</span>
       </div>
-      ${
-        assignedQuote
-          ? `
-            <div class="contact-reveal">
-              <span>✅ <strong>${escapeHTML(assignedQuote.ustaadName)}</strong> is assigned to this job.</span>
-              <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
-                <button class="btn btn-primary" data-call-name="${escapeHTML(assignedQuote.ustaadName)}" data-call-phone="${escapeHTML(assignedQuote.phone || "0300-0000000")}" type="button">📞 Call</button>
-                <button class="btn btn-ghost" data-chat-name="${escapeHTML(assignedQuote.ustaadName)}" data-chat-phone="${escapeHTML(assignedQuote.phone || "0300-0000000")}" type="button">💬 Message</button>
-              </div>
-            </div>
-          `
-          : pendingQuotes.length
-            ? `<div class="quotes-block">${pendingQuotes.map(q => renderQuoteCard(job, q)).join("")}</div>`
-            : `<p class="empty-note" style="padding:10px 0 0;">Waiting for Ustaads to respond with a quote...</p>`
-      }
+      ${offersHTML}
     </article>
   `;
 }
@@ -598,8 +828,7 @@ function renderQuoteCard(job, quote){
     : "";
   const cityPart = quote.ustaadCity ? `<span>📍 ${escapeHTML(quote.ustaadCity)}</span>` : "";
   const expPart = quote.ustaadExp ? `<span>🧰 ${escapeHTML(String(quote.ustaadExp))} yrs exp</span>` : "";
-  const ratingPart = quote.ustaadRating ? `<span>⭐ ${escapeHTML(quote.ustaadRating)}</span>` : "";
-  const metaHTML = cityPart + expPart + ratingPart;
+  const metaHTML = cityPart + expPart;
   return `
     <div class="quote-card" data-quote-id="${quote.id}">
       <div class="quote-head">
@@ -608,9 +837,10 @@ function renderQuoteCard(job, quote){
           ${quote.type === "fixed" ? "Fixed Price" : "Will Quote After Visit"}
         </span>
       </div>
-     <div style="display:flex; gap:10px; flex-wrap:wrap; font-size:.8rem; color:var(--muted); margin-bottom:10px;">
+     <div style="display:flex; gap:10px; flex-wrap:wrap; font-size:.8rem; color:var(--muted); margin-bottom:6px;">
         ${metaHTML}
       </div>
+      ${renderReviewSummaryHTML(quote.ustaadName)}
       ${portfolioHTML}
         ${
         quote.type === "fixed"
@@ -643,16 +873,18 @@ function openUstaadProfileModal(jobId, quoteId){
 
  const cityPart = quote.ustaadCity ? `<span>📍 ${escapeHTML(quote.ustaadCity)}</span>` : "";
   const expPart = quote.ustaadExp ? `<span>🧰 ${escapeHTML(String(quote.ustaadExp))} yrs exp</span>` : "";
-  const ratingPart = quote.ustaadRating ? `<span>⭐ ${escapeHTML(quote.ustaadRating)}</span>` : "";
 
   const html = `
     <h2>👨‍🔧 ${escapeHTML(quote.ustaadName)}</h2>
     <div style="display:flex; gap:10px; flex-wrap:wrap; font-size:.85rem; color:var(--muted); margin-top:8px;">
-      ${cityPart}${expPart}${ratingPart}
+      ${cityPart}${expPart}
     </div>
+    ${renderReviewSummaryHTML(quote.ustaadName)}
     <p style="margin-top:14px;">${priceLine}</p>
     <h3 style="margin-top:18px; font-family:Poppins,sans-serif;">Portfolio</h3>
     ${portfolioHTML}
+    <h3 style="margin-top:18px; font-family:Poppins,sans-serif;">Customer Reviews</h3>
+    <div style="margin-top:10px;">${renderReviewListHTML(quote.ustaadName)}</div>
     <div class="quote-option-btns">
       <button class="btn btn-primary" data-select-quote="${job.id}:${quote.id}" type="button">Select This Ustaad</button>
       <button class="btn btn-ghost" type="button" onclick="closeModal()">Close</button>
@@ -660,6 +892,45 @@ function openUstaadProfileModal(jobId, quoteId){
   `;
   openModal(html);
 }
+
+/* =========================================================
+   LEAVE A REVIEW MODAL
+   ========================================================= */
+
+function openLeaveReviewModal(ustaadName){
+  let selectedStars = 5;
+  const html = `
+    <h2>Rate ${escapeHTML(ustaadName)}</h2>
+    <p style="color:var(--muted); margin-top:6px;">Kaam kaisa raha? Apna feedback dein.</p>
+    <div class="star-picker" id="starPicker">
+      ${[1,2,3,4,5].map(n => `<button type="button" data-star="${n}" class="${n <= selectedStars ? "on" : ""}">★</button>`).join("")}
+    </div>
+    <div class="field">
+      <textarea id="reviewText" rows="3" placeholder="Apna tajurba likhein (optional)"></textarea>
+    </div>
+    <div class="quote-option-btns">
+      <button class="btn btn-primary" id="submitReviewBtn" type="button">Submit Review</button>
+      <button class="btn btn-ghost" type="button" onclick="closeModal()">Cancel</button>
+    </div>
+  `;
+  openModal(html);
+
+  $$("#starPicker button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      selectedStars = Number(btn.dataset.star);
+      $$("#starPicker button").forEach(b => b.classList.toggle("on", Number(b.dataset.star) <= selectedStars));
+    });
+  });
+
+  $("#submitReviewBtn")?.addEventListener("click", () => {
+    const text = $("#reviewText")?.value.trim() || "";
+    addUserReview(ustaadName, selectedStars, text || "Great work, thank you!");
+    closeModal();
+    toast("Review submitted! 🌟");
+    renderCustomerDashboard();
+  });
+}
+
 /* =========================================================
    USTAAD DASHBOARD
    ========================================================= */
@@ -712,7 +983,13 @@ function renderUstaadDashboard(){
   const total = state.jobs.reduce((sum, job) => sum + Number(job.budget || 0), 0);
   if($("#uKpiTotal")) $("#uKpiTotal").textContent = `Rs. ${total.toLocaleString()}`;
   if($("#uKpiMonthly")) $("#uKpiMonthly").textContent = `Rs. ${total.toLocaleString()}`;
-  if($("#uKpiRating")) $("#uKpiRating").textContent = state.jobs.length ? "4.9 ⭐" : "—";
+
+  const myName = state.ustaad?.fullName || "You";
+  const myAvg = averageRating(myName);
+  if($("#uKpiRating")) $("#uKpiRating").textContent = myAvg ? `${myAvg.toFixed(1)} ⭐` : "—";
+
+  const reviewsList = $("#ustaadReviewsList");
+  if(reviewsList) reviewsList.innerHTML = renderReviewListHTML(myName);
 
   renderUstaadJobs("#ustaadNewJobs", newJobs, "new");
   renderUstaadJobs("#ustaadActiveJobs", activeJobs, "active");
@@ -750,11 +1027,14 @@ function renderUstaadJob(job, mode){
       ${
         mode === "active" && assignedQuote
           ? `
-            <div class="contact-reveal">
-              <span>📌 Job at ${escapeHTML(job.location)}</span>
-              <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
-                <button class="btn btn-primary" data-call-name="${escapeHTML(job.title + " - Customer")}" data-call-phone="${escapeHTML(job.phone || "0300-0000000")}" type="button">📞 Call Customer</button>
-                <button class="btn btn-ghost" data-chat-name="${escapeHTML("Customer")}" data-chat-phone="${escapeHTML(job.phone || "0300-0000000")}" type="button">💬 Message</button>
+            <div class="job-offers-section">
+              <div class="job-offers-heading">📌 Customer Contact</div>
+              <div class="contact-reveal">
+                <span>📌 Job at ${escapeHTML(job.location)}</span>
+                <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
+                <button class="btn btn-primary" data-call-name="${escapeHTML("Customer — " + job.title)}" data-call-phone="${escapeHTML(job.phone || "0300-0000000")}" type="button">📞 Call Customer</button>
+                <button class="btn btn-ghost"data-chat-name="${escapeHTML(job.title)}"data-chat-phone="${escapeHTML(job.phone || "0300-0000000")}" type="button">💬 Message</button>
+                </div>
               </div>
             </div>
           `
@@ -797,6 +1077,13 @@ function setupJobActions(){
     if(confirmSelectBtn){
       const [jobId, quoteId] = confirmSelectBtn.dataset.confirmSelect.split(":");
       confirmQuoteSelection(Number(jobId), quoteId);
+      return;
+    }
+
+    // Leave a review
+    const reviewBtn = event.target.closest("[data-leave-review]");
+    if(reviewBtn){
+      openLeaveReviewModal(reviewBtn.dataset.leaveReview);
       return;
     }
 
@@ -880,7 +1167,7 @@ function submitUstaadQuote(jobId, type, priceInfo = {}){
   quote.ustaadName = ustaadName;
   quote.ustaadCity = state.ustaad?.city || "";
   quote.ustaadExp = state.ustaad?.experience || "";
-  quote.ustaadRating = "4.9";
+  quote.ustaadRating = averageRating(ustaadName).toFixed(1);
   quote.portfolio = state.ustaad?.portfolio || [];
   quote.type = type;
   quote.material = type === "fixed" ? material : 0;
@@ -1204,6 +1491,10 @@ function setupUstaadRegistration(){
     });
   });
 
+  // Portfolio photos/videos are only shown/collected within Step 3 (Documents) of
+  // the registration form now — the field-row was previously placed outside any
+  // .form-step wrapper in the HTML, which made it visible on every step. That has
+  // been fixed in index.html; this handler just wires up the uploads.
   $("#uPortfolioPhotos")?.addEventListener("change", async () => {
     const items = await filesToDataURLs($("#uPortfolioPhotos").files, 6);
     ensureUstaadDraft().portfolio = [...ensureUstaadDraft().portfolio.filter(p=>p.kind!=="photo"), ...items.map(i=>({...i, kind:"photo"}))];
@@ -1509,8 +1800,22 @@ let three = {
   objects:[], clock:null, initialized:false
 };
 
+function isMobileDevice(){
+  return window.innerWidth <= 600 || window.matchMedia("(pointer: coarse)").matches;
+}
+
 function initThree(){
   const container = $("#threeScene");
+
+  // Performance fix: skip the heavy WebGL scene entirely on small/touch
+  // devices so the site does not feel laggy on mobile.
+  if(isMobileDevice()){
+    state.lowPower = true;
+    document.body.classList.add("kk-low-power");
+    hideThreeLoader();
+    return;
+  }
+
   if(!container || typeof THREE === "undefined"){
     console.warn("Three.js unavailable.");
     hideThreeLoader();
@@ -1553,107 +1858,112 @@ function setupThreeLights(){
 function orangeMaterial(){ return new THREE.MeshStandardMaterial({ color:0xff6b00, metalness:.35, roughness:.28 }); }
 function whiteMaterial(){ return new THREE.MeshStandardMaterial({ color:0xf7f7f7, metalness:.15, roughness:.35 }); }
 function darkMaterial(){ return new THREE.MeshStandardMaterial({ color:0x1d2024, metalness:.55, roughness:.25 }); }
+function steelMaterial(){ return new THREE.MeshStandardMaterial({ color:0xb9bcc2, metalness:.75, roughness:.22 }); }
+function yellowMaterial(){ return new THREE.MeshStandardMaterial({ color:0xffd447, metalness:.25, roughness:.3, emissive:0x4d3600, emissiveIntensity:.15 }); }
 
-function createToolbox(){
+/* ---- Themed tools matching a "kaam krwao" (home services) concept ---- */
+
+function createScrewdriver(){
   const group = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.35, 1.2), orangeMaterial());
-  body.position.y = -.1;
-  group.add(body);
-  const top = new THREE.Mesh(new THREE.BoxGeometry(1.85, .18, 1.05), whiteMaterial());
-  top.position.y = .63;
-  group.add(top);
-  const handle = new THREE.Mesh(new THREE.TorusGeometry(.55, .09, 12, 32, Math.PI), darkMaterial());
-  handle.rotation.x = Math.PI / 2;
-  handle.position.y = .82;
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, 1.6, 14), steelMaterial());
+  shaft.position.y = -.2;
+  group.add(shaft);
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(.09, .25, 14), steelMaterial());
+  tip.position.y = -1.05;
+  group.add(tip);
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(.22, .26, .75, 16), orangeMaterial());
+  handle.position.y = .95;
   group.add(handle);
   group.position.set(4, 1.8, -1);
-  group.rotation.set(-.2, .4, -.12);
-  group.scale.setScalar(.9);
+  group.rotation.set(-.2, .4, .55);
+  group.scale.setScalar(1.05);
   three.group.add(group);
   three.objects.push({ object:group, speed:.45, offset:0, baseY:1.8 });
 }
 
-function createWrench(){
+function createHammer(){
   const group = new THREE.Group();
-  const handle = new THREE.Mesh(new THREE.BoxGeometry(.35, 2.2, .18), darkMaterial());
-  handle.position.y = -.5;
-  handle.rotation.z = -.15;
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(.09, .07, 1.7, 14), darkMaterial());
+  handle.position.y = -.3;
   group.add(handle);
-  const head = new THREE.Mesh(new THREE.TorusGeometry(.48, .14, 12, 32), darkMaterial());
-  head.position.y = .65;
+  const head = new THREE.Mesh(new THREE.BoxGeometry(.85, .32, .32), steelMaterial());
+  head.position.y = .68;
   group.add(head);
-  const center = new THREE.Mesh(new THREE.CylinderGeometry(.27, .27, .25, 16), orangeMaterial());
-  center.rotation.x = Math.PI / 2;
-  center.position.y = .65;
-  group.add(center);
+  const claw = new THREE.Mesh(new THREE.TorusGeometry(.24, .09, 10, 20, Math.PI), steelMaterial());
+  claw.position.set(-.35, .68, 0);
+  claw.rotation.z = Math.PI / 2;
+  group.add(claw);
   group.position.set(-4, 1.1, -2);
-  group.rotation.z = -.4;
-  group.scale.setScalar(.8);
+  group.rotation.z = -.35;
+  group.scale.setScalar(.85);
   three.group.add(group);
   three.objects.push({ object:group, speed:.65, offset:1.5, baseY:1.1 });
 }
 
-function createHouse(){
+function createPipeWrench(){
   const group = new THREE.Group();
-  const base = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.8, 2), whiteMaterial());
-  base.position.y = -.3;
-  group.add(base);
-  const roof = new THREE.Mesh(new THREE.ConeGeometry(1.8, 1.5, 4), orangeMaterial());
-  roof.rotation.y = Math.PI / 4;
-  roof.position.y = 1.35;
-  group.add(roof);
-  const door = new THREE.Mesh(new THREE.BoxGeometry(.45, .8, .08), darkMaterial());
-  door.position.set(0, -.75, 1.04);
-  group.add(door);
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(.11, .11, 1.9, 14), orangeMaterial());
+  handle.position.y = -.3;
+  handle.rotation.z = .15;
+  group.add(handle);
+  const jawFixed = new THREE.Mesh(new THREE.BoxGeometry(.55, .3, .28), steelMaterial());
+  jawFixed.position.set(.18, .7, 0);
+  jawFixed.rotation.z = -.3;
+  group.add(jawFixed);
+  const jawMove = new THREE.Mesh(new THREE.BoxGeometry(.4, .22, .24), steelMaterial());
+  jawMove.position.set(.02, .42, 0);
+  jawMove.rotation.z = .1;
+  group.add(jawMove);
   group.position.set(3.7, -2.1, -1);
   group.rotation.y = -.35;
-  group.scale.setScalar(.85);
+  group.scale.setScalar(.8);
   three.group.add(group);
   three.objects.push({ object:group, speed:.35, offset:2, baseY:-2.1 });
 }
 
-function createAIOrb(){
+function createElectricPlug(){
   const group = new THREE.Group();
-  const sphere = new THREE.Mesh(new THREE.SphereGeometry(1.05, 32, 32), new THREE.MeshStandardMaterial({ color:0xff6b00, emissive:0x7d2600, emissiveIntensity:.35, metalness:.5, roughness:.18 }));
-  group.add(sphere);
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.4, .035, 10, 64), new THREE.MeshBasicMaterial({ color:0xff6b00, transparent:true, opacity:.7 }));
-  ring.rotation.x = Math.PI / 2;
-  group.add(ring);
-  const ring2 = ring.clone();
-  ring2.rotation.x = Math.PI / 3;
-  ring2.rotation.y = Math.PI / 4;
-  group.add(ring2);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, .35, 24), whiteMaterial());
+  body.rotation.x = Math.PI / 2;
+  group.add(body);
+  const pinMat = yellowMaterial();
+  [[-.16, .12], [.16, .12], [0, -.2]].forEach(([x, y]) => {
+    const pin = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, .3, 10), pinMat);
+    pin.rotation.x = Math.PI / 2;
+    pin.position.set(x, y, .28);
+    group.add(pin);
+  });
+  const bolt = new THREE.Mesh(new THREE.ConeGeometry(.16, .4, 4), yellowMaterial());
+  bolt.position.set(0, 0, -.35);
+  bolt.rotation.z = Math.PI;
+  group.add(bolt);
   group.position.set(-3.5, -2.2, -2);
   three.group.add(group);
   three.objects.push({ object:group, speed:.8, offset:.8, baseY:-2.2, orb:true });
 }
 
-function createVehicle(){
+function createPaintRoller(){
   const group = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, .7, 1), orangeMaterial());
-  group.add(body);
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.15, .55, .9), whiteMaterial());
-  cabin.position.set(.25, .55, 0);
-  group.add(cabin);
-  const wheelGeometry = new THREE.CylinderGeometry(.3, .3, .2, 20);
-  const wheelMaterial = darkMaterial();
-  [-.7,.7].forEach(x => {
-    const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-    wheel.rotation.z = Math.PI / 2;
-    wheel.position.set(x, -.5, .55);
-    group.add(wheel);
-    const wheel2 = wheel.clone();
-    wheel2.position.z = -.55;
-    group.add(wheel2);
-  });
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(.08, .08, 1.3, 12), darkMaterial());
+  handle.position.y = -.4;
+  handle.rotation.z = .1;
+  group.add(handle);
+  const frame = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, .9, 10), steelMaterial());
+  frame.position.set(0, .55, 0);
+  frame.rotation.z = Math.PI / 2;
+  group.add(frame);
+  const roller = new THREE.Mesh(new THREE.CylinderGeometry(.24, .24, .85, 20), orangeMaterial());
+  roller.position.set(0, .55, 0);
+  roller.rotation.z = Math.PI / 2;
+  group.add(roller);
   group.position.set(0, -3.2, -1);
-  group.scale.setScalar(.7);
+  group.scale.setScalar(.85);
   three.group.add(group);
   three.objects.push({ object:group, speed:.25, offset:3, baseY:-3.2 });
 }
 
 function createThreeObjects(){
-  createToolbox(); createWrench(); createHouse(); createAIOrb(); createVehicle();
+  createScrewdriver(); createHammer(); createPipeWrench(); createElectricPlug(); createPaintRoller();
 }
 
 function animateThree(){
@@ -1680,6 +1990,7 @@ function resizeThree(){
 
 function setup3DMouse(){
   const panel = $("#hero3DPanel");
+  if(state.lowPower) return; // skip parallax listeners on low-power/mobile devices
   document.addEventListener("mousemove", event => {
     state.mouseX = (event.clientX / window.innerWidth) * 2 - 1;
     state.mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -1696,6 +2007,7 @@ function setup3DMouse(){
 }
 
 function setupCardTilt(){
+  if(state.lowPower) return; // tilt-on-mouse is a desktop-only affordance; skip on mobile for performance
   const cards = $$(".cat-card, .how-card, .ustaad-card, .dash-card, .job-card");
   cards.forEach(card => {
     card.addEventListener("mousemove", event => {
@@ -1760,6 +2072,7 @@ function setupNavbarScroll(){
 function init(){
   resetAppData();
   setupModal();
+  setupMediaViewer();
   setupNavigation();
   setupMobileMenu();
   setupJobForm();
