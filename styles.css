@@ -60,9 +60,9 @@ img{ max-width:100%; display:block; }
   to{ opacity:1; transform:translateY(0) translateZ(0); }
 }
 
-/* =========================================================
+/* ==========================================================
    NAVBAR
-   ========================================================= */
+   ========================================================== */
 
 .navbar{
   position:fixed; top:0; left:0; right:0; z-index:1000;
@@ -190,6 +190,32 @@ img{ max-width:100%; display:block; }
 
 .welcome-bg{ position:absolute; inset:0; z-index:-1; pointer-events:none; }
 
+/* .orbit / .grid-glow are used inside both .welcome-bg and .hero-bg
+   but had no rules anywhere in this file, so they rendered as empty,
+   invisible elements. Adding the missing decorative styling here. */
+.orbit{
+  position:absolute; border-radius:50%;
+  border:1px solid rgba(255,107,0,.12);
+  background:radial-gradient(circle at 35% 30%, rgba(255,107,0,.10), transparent 70%);
+  filter:blur(2px);
+  animation:orbitFloat 8s ease-in-out infinite;
+}
+.orbit-a{ width:420px; height:420px; top:-120px; left:-100px; }
+.orbit-b{ width:320px; height:320px; bottom:-140px; right:-80px; animation-delay:-3s; }
+@keyframes orbitFloat{
+  0%,100%{ transform:translateY(0) scale(1); opacity:.6; }
+  50%{ transform:translateY(-25px) scale(1.08); opacity:1; }
+}
+.grid-glow{
+  position:absolute; inset:0;
+  background-image:
+    linear-gradient(rgba(0,0,0,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,.035) 1px, transparent 1px);
+  background-size:48px 48px;
+  -webkit-mask-image:radial-gradient(circle at 50% 35%, #000 0%, transparent 70%);
+  mask-image:radial-gradient(circle at 50% 35%, #000 0%, transparent 70%);
+}
+
 .welcome-inner{
   width:min(760px,100%);
   text-align:center;
@@ -311,6 +337,7 @@ img{ max-width:100%; display:block; }
 .hero-3d-panel{
   position:relative; width:min(470px,100%); aspect-ratio:1; margin:auto;
   border-radius:50%; display:grid; place-items:center; transform-style:preserve-3d;
+  perspective:1000px;
   background:radial-gradient(circle at 35% 30%, rgba(255,255,255,.95), rgba(255,255,255,.45) 35%, rgba(255,107,0,.06));
   box-shadow:0 50px 100px rgba(0,0,0,.08);
   transition:transform .15s ease-out;
@@ -357,6 +384,7 @@ img{ max-width:100%; display:block; }
   background:rgba(255,255,255,.82);
   border:1px solid rgba(0,0,0,.07);
   backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
   box-shadow:0 15px 40px rgba(0,0,0,.1);
   font-size:.75rem; font-weight:800; pointer-events:none;
   animation:labelFloat 5s ease-in-out infinite;
@@ -726,6 +754,7 @@ img{ max-width:100%; display:block; }
   border:1px solid var(--border);
   box-shadow:0 30px 80px rgba(0,0,0,.16);
   backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
 }
 .ai-panel.open{ display:flex; animation:aiOpen .3s ease both; }
 @keyframes aiOpen{
@@ -753,7 +782,7 @@ img{ max-width:100%; display:block; }
 .modal-overlay{
   position:fixed; inset:0; z-index:3000; display:none;
   align-items:center; justify-content:center; padding:20px;
-  background:rgba(0,0,0,.35); backdrop-filter:blur(10px);
+  background:rgba(0,0,0,.35); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
 }
 .modal-overlay.open{ display:flex; }
 .modal-box{
@@ -1364,13 +1393,6 @@ img{ max-width:100%; display:block; }
 }
 
 /* Modal override for chat */
-.modal-box:has(.chat-popup-wrap) {
-  padding: 0;
-  overflow: hidden;
-  border-radius: 25px;
-  width: min(400px, 92vw);
-}
-
 /* Override modal for chat */
 .modal-box:has(.chat-popup-wrap) {
   padding: 0;
@@ -1552,6 +1574,7 @@ img{ max-width:100%; display:block; }
     right: 0;
     background: rgba(255,255,255,.98);
     backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     padding: 20px;
     gap: 14px;
     border-bottom: 1px solid var(--border);
@@ -1661,7 +1684,8 @@ img{ max-width:100%; display:block; }
   }
 }
 
-.modal-box:has(.chat-popup-wrap){
+@media(max-width:600px){
+  .modal-box:has(.chat-popup-wrap){
     width: 100%;
     border-radius: 20px 20px 0 0;
   }
@@ -1669,6 +1693,7 @@ img{ max-width:100%; display:block; }
     height: min(85vh, 640px);
     border-radius: 20px 20px 0 0;
   }
+}
 
 /* =========================================================
    LOW-POWER MODE (added via JS for slow/mobile devices)
