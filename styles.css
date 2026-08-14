@@ -1,26 +1,26 @@
-/* ==========================================================
+/* =========================================================
    KAAM KRWAO — PREMIUM WHITE 3D UI
    FILE: styles.css
-   ========================================================== */
+   ========================================================= */
 
 :root{
-  --orange:#ff6b00;
-  --orange-2:#ff8a3d;
-  --orange-dark:#c94d00;
+  --orange:#e05a00;
+  --orange-2:#f07030;
+  --orange-dark:#b04000;
 
   --white:#ffffff;
-  --bg:#f6f7f9;
-  --bg-2:#eef0f3;
+  --bg:#f8f9fa;
+  --bg-2:#f0f2f4;
 
-  --text:#111318;
-  --muted:#6d727c;
+  --text:#1a1d23;
+  --muted:#71757f;
 
-  --border:rgba(0,0,0,.08);
+  --border:rgba(0,0,0,.07);
 
-  --shadow: 0 25px 70px rgba(0,0,0,.08);
-  --shadow-soft: 0 12px 35px rgba(0,0,0,.07);
+  --shadow: 0 12px 40px rgba(0,0,0,.06);
+  --shadow-soft: 0 6px 20px rgba(0,0,0,.05);
 
-  --radius:24px;
+  --radius:20px;
 }
 
 *{ margin:0; padding:0; box-sizing:border-box; }
@@ -30,10 +30,7 @@ body{
   min-height:100vh;
   font-family: Inter, Arial, sans-serif;
   color:var(--text);
-  background:
-    radial-gradient(circle at 10% 10%, rgba(255,107,0,.08), transparent 28%),
-    radial-gradient(circle at 90% 30%, rgba(0,0,0,.04), transparent 30%),
-    linear-gradient(135deg, #ffffff, #f4f5f7 55%, #ffffff);
+  background:#f8f9fa;
   overflow-x:hidden;
 }
 
@@ -60,9 +57,9 @@ img{ max-width:100%; display:block; }
   to{ opacity:1; transform:translateY(0) translateZ(0); }
 }
 
-/* ==========================================================
+/* =========================================================
    NAVBAR
-   ========================================================== */
+   ========================================================= */
 
 .navbar{
   position:fixed; top:0; left:0; right:0; z-index:1000;
@@ -190,32 +187,6 @@ img{ max-width:100%; display:block; }
 
 .welcome-bg{ position:absolute; inset:0; z-index:-1; pointer-events:none; }
 
-/* .orbit / .grid-glow are used inside both .welcome-bg and .hero-bg
-   but had no rules anywhere in this file, so they rendered as empty,
-   invisible elements. Adding the missing decorative styling here. */
-.orbit{
-  position:absolute; border-radius:50%;
-  border:1px solid rgba(255,107,0,.12);
-  background:radial-gradient(circle at 35% 30%, rgba(255,107,0,.10), transparent 70%);
-  filter:blur(2px);
-  animation:orbitFloat 8s ease-in-out infinite;
-}
-.orbit-a{ width:420px; height:420px; top:-120px; left:-100px; }
-.orbit-b{ width:320px; height:320px; bottom:-140px; right:-80px; animation-delay:-3s; }
-@keyframes orbitFloat{
-  0%,100%{ transform:translateY(0) scale(1); opacity:.6; }
-  50%{ transform:translateY(-25px) scale(1.08); opacity:1; }
-}
-.grid-glow{
-  position:absolute; inset:0;
-  background-image:
-    linear-gradient(rgba(0,0,0,.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,0,0,.035) 1px, transparent 1px);
-  background-size:48px 48px;
-  -webkit-mask-image:radial-gradient(circle at 50% 35%, #000 0%, transparent 70%);
-  mask-image:radial-gradient(circle at 50% 35%, #000 0%, transparent 70%);
-}
-
 .welcome-inner{
   width:min(760px,100%);
   text-align:center;
@@ -291,6 +262,15 @@ img{ max-width:100%; display:block; }
   font-size:.85rem;
 }
 
+.orbit{
+  position:absolute; border-radius:50%;
+  border:1px solid rgba(0,0,0,.05);
+  background:transparent;
+  animation:none;
+}
+.orbit-a{ width:380px; height:380px; top:-120px; left:-100px; opacity:.3; }
+.orbit-b{ width:280px; height:280px; bottom:-140px; right:-80px; opacity:.2; }
+
 /* =========================================================
    HERO
    ========================================================= */
@@ -337,7 +317,6 @@ img{ max-width:100%; display:block; }
 .hero-3d-panel{
   position:relative; width:min(470px,100%); aspect-ratio:1; margin:auto;
   border-radius:50%; display:grid; place-items:center; transform-style:preserve-3d;
-  perspective:1000px;
   background:radial-gradient(circle at 35% 30%, rgba(255,255,255,.95), rgba(255,255,255,.45) 35%, rgba(255,107,0,.06));
   box-shadow:0 50px 100px rgba(0,0,0,.08);
   transition:transform .15s ease-out;
@@ -349,7 +328,7 @@ img{ max-width:100%; display:block; }
   filter:blur(18px);
   animation:pulseGlow 4s ease-in-out infinite;
 }
-@keyframes pulseGlow{ 0%,100%{ transform:scale(.9); opacity:.6; } 50%{ transform:scale(1.12); opacity:1; } }
+@keyframes pulseGlow{ 0%,100%{ transform:scale(.95); opacity:.35; } 50%{ transform:scale(1.05); opacity:.55; } }
 
 .hero-3d-content{
   width:220px; height:220px; border-radius:50%;
@@ -358,11 +337,11 @@ img{ max-width:100%; display:block; }
   background:radial-gradient(circle at 30% 25%, #fff, #ffb276 8%, var(--orange) 42%, #9f3500 100%);
   box-shadow:inset -25px -25px 45px rgba(0,0,0,.3), inset 15px 12px 30px rgba(255,255,255,.4), 0 40px 80px rgba(255,107,0,.3);
   transform:translateZ(70px);
-  animation:heroOrbFloat 5s ease-in-out infinite;
+  animation:heroOrbFloat 7s ease-in-out infinite;
 }
 @keyframes heroOrbFloat{
-  0%,100%{ transform:translateZ(70px) translateY(0) rotateY(0); }
-  50%{ transform:translateZ(100px) translateY(-16px) rotateY(180deg); }
+  0%,100%{ transform:translateZ(50px) translateY(0); }
+  50%{ transform:translateZ(65px) translateY(-10px); }
 }
 
 .hero-3d-icon{ font-size:4rem; filter:drop-shadow(0 15px 15px rgba(0,0,0,.25)); margin-bottom:10px; }
@@ -375,6 +354,9 @@ img{ max-width:100%; display:block; }
 @keyframes ringSpin{ to{ transform:rotateX(70deg) rotateZ(345deg) translateZ(35px); } }
 @keyframes ringSpinReverse{ to{ transform:rotateX(70deg) rotateZ(-330deg) translateZ(55px); } }
 
+/* Slow both rings down */
+.ring-one{ animation:ringSpin 20s linear infinite; }
+.ring-two{ animation:ringSpinReverse 16s linear infinite; }
 /* =========================================================
    3D LABELS
    ========================================================= */
@@ -384,7 +366,6 @@ img{ max-width:100%; display:block; }
   background:rgba(255,255,255,.82);
   border:1px solid rgba(0,0,0,.07);
   backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);
   box-shadow:0 15px 40px rgba(0,0,0,.1);
   font-size:.75rem; font-weight:800; pointer-events:none;
   animation:labelFloat 5s ease-in-out infinite;
@@ -392,8 +373,10 @@ img{ max-width:100%; display:block; }
 .three-label-tool{ right:15%; top:20%; }
 .three-label-home{ right:34%; bottom:18%; animation-delay:-2s; }
 .three-label-ai{ left:8%; bottom:18%; animation-delay:-3s; }
-@keyframes labelFloat{ 0%,100%{ transform:translateY(0) translateZ(30px); } 50%{ transform:translateY(-12px) translateZ(50px); } }
-
+@keyframes labelFloat{ 
+  0%,100%{ transform:translateY(0) translateZ(20px); } 
+  50%{ transform:translateY(-6px) translateZ(30px); } 
+}
 /* =========================================================
    SECTIONS
    ========================================================= */
@@ -484,9 +467,10 @@ img{ max-width:100%; display:block; }
   transform-style:preserve-3d;
 }
 .cta-banner::before{
-  content:""; position:absolute; width:300px; height:300px; right:-100px; top:-130px; border-radius:50%;
-  background:radial-gradient(circle, rgba(255,107,0,.5), transparent 70%); filter:blur(5px);
+  content:""; position:absolute; width:200px; height:200px; right:-60px; top:-80px; border-radius:50%;
+  background:radial-gradient(circle, rgba(255,107,0,.25), transparent 70%); filter:blur(8px);
 }
+
 .cta-banner-inner{ position:relative; z-index:2; transform:translateZ(35px); }
 .cta-banner h2{ font-family:Poppins,sans-serif; font-size:clamp(2rem,4vw,4rem); margin-bottom:14px; }
 .cta-banner p{ color:#c8cbd0; margin-bottom:25px; }
@@ -744,7 +728,7 @@ img{ max-width:100%; display:block; }
   position:absolute; inset:-8px; border:2px solid rgba(255,107,0,.2); border-radius:50%;
   animation:aiPulse 2s infinite;
 }
-@keyframes aiPulse{ from{ transform:scale(.85); opacity:1; } to{ transform:scale(1.4); opacity:0; } }
+@keyframes aiPulse{ from{ transform:scale(.9); opacity:.5; } to{ transform:scale(1.25); opacity:0; } }
 
 .ai-panel{
   position:absolute; right:0; bottom:85px;
@@ -754,7 +738,6 @@ img{ max-width:100%; display:block; }
   border:1px solid var(--border);
   box-shadow:0 30px 80px rgba(0,0,0,.16);
   backdrop-filter:blur(20px);
-  -webkit-backdrop-filter:blur(20px);
 }
 .ai-panel.open{ display:flex; animation:aiOpen .3s ease both; }
 @keyframes aiOpen{
@@ -782,7 +765,7 @@ img{ max-width:100%; display:block; }
 .modal-overlay{
   position:fixed; inset:0; z-index:3000; display:none;
   align-items:center; justify-content:center; padding:20px;
-  background:rgba(0,0,0,.35); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  background:rgba(0,0,0,.35); backdrop-filter:blur(10px);
 }
 .modal-overlay.open{ display:flex; }
 .modal-box{
@@ -1393,6 +1376,13 @@ img{ max-width:100%; display:block; }
 }
 
 /* Modal override for chat */
+.modal-box:has(.chat-popup-wrap) {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 25px;
+  width: min(400px, 92vw);
+}
+
 /* Override modal for chat */
 .modal-box:has(.chat-popup-wrap) {
   padding: 0;
@@ -1574,7 +1564,6 @@ img{ max-width:100%; display:block; }
     right: 0;
     background: rgba(255,255,255,.98);
     backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
     padding: 20px;
     gap: 14px;
     border-bottom: 1px solid var(--border);
@@ -1684,8 +1673,7 @@ img{ max-width:100%; display:block; }
   }
 }
 
-@media(max-width:600px){
-  .modal-box:has(.chat-popup-wrap){
+.modal-box:has(.chat-popup-wrap){
     width: 100%;
     border-radius: 20px 20px 0 0;
   }
@@ -1693,7 +1681,6 @@ img{ max-width:100%; display:block; }
     height: min(85vh, 640px);
     border-radius: 20px 20px 0 0;
   }
-}
 
 /* =========================================================
    LOW-POWER MODE (added via JS for slow/mobile devices)
