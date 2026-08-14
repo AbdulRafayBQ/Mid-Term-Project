@@ -980,7 +980,7 @@ function renderUstaadDashboard(){
   if($("#uKpiActive")) $("#uKpiActive").textContent = activeJobs.length;
   if($("#uKpiCompleted")) $("#uKpiCompleted").textContent = completedJobs.length;
 
-  const total = state.jobs.reduce((sum, job) => sum + Number(job.budget || 0), 0);
+  const total = completedJobs.reduce((sum, job) => sum + Number(job.budget || 0), 0);
   if($("#uKpiTotal")) $("#uKpiTotal").textContent = `Rs. ${total.toLocaleString()}`;
   if($("#uKpiMonthly")) $("#uKpiMonthly").textContent = `Rs. ${total.toLocaleString()}`;
 
@@ -1033,7 +1033,7 @@ function renderUstaadJob(job, mode){
                 <span>📌 Job at ${escapeHTML(job.location)}</span>
                 <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
                 <button class="btn btn-primary" data-call-name="${escapeHTML("Customer — " + job.title)}" data-call-phone="${escapeHTML(job.phone || "0300-0000000")}" type="button">📞 Call Customer</button>
-                <button class="btn btn-ghost"data-chat-name="${escapeHTML(job.title)}"data-chat-phone="${escapeHTML(job.phone || "0300-0000000")}" type="button">💬 Message</button>
+                <button class="btn btn-ghost" data-chat-name="${escapeHTML(job.title)}" data-chat-phone="${escapeHTML(job.phone || "0300-0000000")}" type="button">💬 Message</button>
                 </div>
               </div>
             </div>
@@ -2070,7 +2070,7 @@ function setupNavbarScroll(){
    ========================================================= */
 
 function init(){
-  resetAppData();
+  loadState();
   setupModal();
   setupMediaViewer();
   setupNavigation();
@@ -2082,6 +2082,7 @@ function init(){
   setupUstaadRegistration();
   setupMembershipPayment();
   setupAI();
+  initThree();
   setup3DMouse();
   setupCardTilt();
   setupCursorLight();
@@ -2089,7 +2090,6 @@ function init(){
   setupNavbarScroll();
   renderCustomerDashboard();
   if(state.ustaad?.paid) renderUstaadDashboard();
-  initThree();
   updateUstaadNavUI();
 }
 
