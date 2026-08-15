@@ -14,7 +14,7 @@
 
 Customers can post their requirements, provide job details, select location and urgency, upload photos or videos, and find a suitable Ustaad for their work.
 
-The core idea, concept, problem-solving approach, and overall product direction of **Kaam Krwao** were developed by **Abdul Rafay**, while **Atisamul Haq** contributed to the 3D UI and visual design of the project.
+The core idea, concept, problem-solving approach, and overall product direction of **Kaam Krwao** were developed by **Abdul Rafay(352173)**, while **Atisamul Haq (502772)** contributed to the 3D UI and visual design of the project.
 
 ---
 
