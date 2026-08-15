@@ -40,13 +40,13 @@ The core idea, concept, problem-solving approach, and overall product direction 
 - HTML5
 - CSS3
 - JavaScript
-- Google Fonts
+- Google Fontst
 - LocalStorage
 - Vercel
 
 ---
 
-## 📂 Project Structure
+## 📂 Project Structur
 
 ```text
 Kaam-Krwao/
